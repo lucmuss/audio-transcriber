@@ -20,7 +20,6 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
 .installed.cfg
@@ -48,6 +47,7 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
+cover/
 
 # Translations
 *.mo
@@ -70,6 +70,7 @@ instance/
 docs/_build/
 
 # PyBuilder
+.pybuilder/
 target/
 
 # Jupyter Notebook
@@ -84,6 +85,12 @@ ipython_config.py
 
 # pipenv
 Pipfile.lock
+
+# poetry
+poetry.lock
+
+# pdm
+.pdm.toml
 
 # PEP 582
 __pypackages__/
@@ -122,7 +129,13 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# IDE
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# IDEs
 .vscode/
 .idea/
 *.swp
@@ -130,14 +143,34 @@ dmypy.json
 *~
 .DS_Store
 
-# Project-specific
+# Project specific
 transcriptions/
-examples/robin_audio/
-*.wav
 *.mp3
+*.wav
 *.m4a
+*.flac
 *.ogg
-.env.local
-config/
+*.aac
+*.wma
+*.mp4
+!examples/**/*.mp3
+!examples/**/*.wav
+
+# Temporary files
+*.tmp
 temp/
 tmp/
+
+# API keys (safety)
+.env.local
+.env.*.local
+secrets/
+*.key
+*.pem
+
+# Backup files
+*.bak
+*.backup
+*~
+
+examples/robin_audio/
