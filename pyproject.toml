@@ -1,0 +1,99 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "audio-transcriber"
+version = "1.0.0"
+description = "Automatic speech-to-text transcription for large audio files using OpenAI-compatible APIs"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Audio Transcriber Contributors", email = "dev@audio-transcriber.dev"},
+]
+keywords = ["transcription", "audio", "openai", "whisper", "speech-to-text", "podcast"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Natural Language :: German",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+    "Topic :: Office/Business",
+    "Topic :: Utilities",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "openai>=1.30.0",
+    "pydub>=0.25.1",
+    "tqdm>=4.66.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "black>=23.0",
+    "isort>=5.0",
+    "flake8>=6.0",
+    "mypy>=1.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/lucmuss/audio-transcriber"
+"Source Code" = "https://github.com/lucmuss/audio-transcriber"
+"Bug Tracker" = "https://github.com/lucmuss/audio-transcriber/issues"
+"Documentation" = "https://github.com/lucmuss/audio-transcriber/blob/main/README.md"
+
+[project.scripts]
+audio-transcriber = "transcribe_audio:main"
+
+[tool.setuptools]
+packages = ["audio_transcriber"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 100
+skip_gitignore = true
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --strict-markers"
+
+[tool.pylint]
+max-line-length = 100
