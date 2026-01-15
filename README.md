@@ -20,15 +20,33 @@ Ein professionelles Python-Tool zur automatischen Transkription großer Audio-Da
 
 ## Installation
 
-### 1. Python-Abhängigkeiten
+### 1. Virtual Environment erstellen (empfohlen)
 
 ```bash
 git clone https://github.com/lucmuss/audio-transcriber.git
 cd audio-transcriber
+
+# Virtual Environment erstellen
+python3 -m venv venv
+
+# Virtual Environment aktivieren
+source venv/bin/activate  # Linux/macOS
+# oder auf Windows:
+# venv\Scripts\activate
+
+# Python-Abhängigkeiten installieren
 pip install -r requirements.txt
 ```
 
-### 2. FFmpeg installieren
+### 2. Alternativ: System-Installation ohne venv
+
+Wenn Sie kein venv verwenden möchten (nicht empfohlen):
+
+```bash
+pip install --break-system-packages -r requirements.txt
+```
+
+### 3. FFmpeg installieren
 
 Das Tool benötigt FFmpeg zur Audio-Verarbeitung. Installieren Sie es für Ihr Betriebssystem:
 
@@ -187,7 +205,7 @@ Standardmäßig werden temporäre Segment-WAV-Dateien nach erfolgreicher Verarbe
 ### Beispiel: Robin Audio (8 Minuten Segmente)
 
 ```bash
-export AUDIO_TRANSCRIBE_API_KEY="sk-..."
+export AUDIO_TRANSCRIBE_API_KEY="sk-"
 
 python audio_transcriber.py \
   --input examples/robin_audio \

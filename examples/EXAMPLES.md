@@ -352,7 +352,7 @@ docker run -e AUDIO_TRANSCRIBE_API_KEY="sk-..." \
 ## 23. Robin Audio Beispiel (8 Minuten Segmente mit Deutsch)
 
 ```bash
-export AUDIO_TRANSCRIBE_API_KEY="sk-..."
+export AUDIO_TRANSCRIBE_API_KEY="sk-"
 
 python audio_transcriber.py \
   --input examples/robin_audio \

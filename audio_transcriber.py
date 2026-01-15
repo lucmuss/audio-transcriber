@@ -123,10 +123,21 @@ class AudioTranscriber:
             end_ms = min(start_ms + segment_length_ms, total_duration_ms)
             segment = audio[start_ms:end_ms]
 
-            # Create output file
+            # Optimize audio for transcription: resample to 16kHz (OpenAI Whisper standard)
+            # and convert to mono for better compression
+            if segment.frame_rate != 16000 or segment.channels != 1:
+                segment = segment.set_frame_rate(16000).set_channels(1)
+
+            # Create output file in MP3 format with optimized bitrate
+            # 64kbps is sufficient for speech transcription and saves ~90% space vs WAV
             file_stem = file_path.stem
-            segment_file = output_dir / f"{file_stem}_{segment_num:03d}.wav"
-            segment.export(str(segment_file), format="wav")
+            segment_file = output_dir / f"{file_stem}_{segment_num:03d}.mp3"
+            segment.export(
+                str(segment_file),
+                format="mp3",
+                bitrate="64k",
+                parameters=["-q:a", "9"]  # VBR quality setting for better compression
+            )
 
             segment_files.append(segment_file)
             logger.debug(
@@ -141,11 +152,6 @@ class AudioTranscriber:
                 break
 
         logger.info(f"Created {len(segment_files)} segments")
-
-        if not keep_segments:
-            # Mark segments for deletion after processing
-            for seg_file in segment_files:
-                segment_files._keep_segments = keep_segments
 
         return segment_files
 
@@ -201,8 +207,10 @@ class AudioTranscriber:
 
                 # Handle different response formats
                 if response_format == "text":
-                    return response.text
+                    # OpenAI returns text directly as a string when format is "text"
+                    return response
                 else:
+                    # For other formats, return the JSON representation
                     return response.model_dump_json()
 
             except APIError as e:
