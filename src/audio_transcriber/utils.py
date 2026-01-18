@@ -4,14 +4,14 @@ Utility functions for Audio Transcriber.
 
 import logging
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Union
 
 from .constants import SUPPORTED_FORMATS
 
 logger = logging.getLogger(__name__)
 
 
-def find_audio_files(path: str) -> List[Path]:
+def find_audio_files(path: Union[str, Path]) -> List[Path]:
     """
     Recursively find all supported audio files in a path.
 
@@ -42,9 +42,7 @@ def find_audio_files(path: str) -> List[Path]:
 
     if path_obj.is_dir():
         audio_files = [
-            f
-            for f in path_obj.rglob("*")
-            if f.is_file() and f.suffix.lower() in SUPPORTED_FORMATS
+            f for f in path_obj.rglob("*") if f.is_file() and f.suffix.lower() in SUPPORTED_FORMATS
         ]
         logger.info(f"Found {len(audio_files)} audio files in {path}")
         return sorted(audio_files)

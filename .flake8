@@ -1,0 +1,45 @@
+[flake8]
+# Maximum line length
+max-line-length = 100
+
+# Ignore specific errors
+# E203: Whitespace before ':' (conflicts with black)
+# E501: Line too long (handled by black)
+# W503: Line break before binary operator (conflicts with black)
+# E402: Module level import not at top of file
+# F401: Module imported but unused (in __init__.py)
+# C901: Function is too complex (acceptable for main orchestration methods)
+extend-ignore = E203,E501,W503,E402,F401,C901
+
+# Exclude paths
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    env,
+    ENV,
+    build,
+    dist,
+    *.egg-info,
+    .tox,
+    .eggs,
+    .pytest_cache,
+    .mypy_cache,
+    examples,
+    docs
+
+# File patterns to check  
+filename = *.py
+
+# Maximum complexity
+max-complexity = 10
+
+# Show source code for errors
+show-source = True
+
+# Show statistics
+statistics = True
+
+# Count errors
+count = True

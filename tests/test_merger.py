@@ -3,6 +3,7 @@ Tests for transcription merger.
 """
 
 import pytest
+
 from audio_transcriber.merger import TranscriptionMerger
 
 
@@ -30,7 +31,7 @@ class TestTranscriptionMerger:
         # Same sentence at end of first and start of second
         transcriptions = [
             "This is the first segment. This is a test.",
-            "This is a test. This is the second segment."
+            "This is a test. This is the second segment.",
         ]
         result = self.merger.merge(transcriptions, "text")
         # Should not duplicate "This is a test"
@@ -39,7 +40,7 @@ class TestTranscriptionMerger:
     def test_merge_json_format(self):
         transcriptions = [
             '{"text": "Hello", "language": "en"}',
-            '{"text": "World", "language": "en"}'
+            '{"text": "World", "language": "en"}',
         ]
         result = self.merger.merge(transcriptions, "json")
         assert "Hello" in result
@@ -48,7 +49,7 @@ class TestTranscriptionMerger:
     def test_merge_srt_format(self):
         transcriptions = [
             "1\n00:00:00,000 --> 00:00:05,000\nHello\n\n",
-            "2\n00:00:05,000 --> 00:00:10,000\nWorld\n\n"
+            "2\n00:00:05,000 --> 00:00:10,000\nWorld\n\n",
         ]
         result = self.merger.merge(transcriptions, "srt")
         assert "Hello" in result
@@ -57,7 +58,7 @@ class TestTranscriptionMerger:
     def test_merge_vtt_format(self):
         transcriptions = [
             "WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello\n\n",
-            "WEBVTT\n\n00:00:05.000 --> 00:00:10.000\nWorld\n\n"
+            "WEBVTT\n\n00:00:05.000 --> 00:00:10.000\nWorld\n\n",
         ]
         result = self.merger.merge(transcriptions, "vtt")
         assert "WEBVTT" in result

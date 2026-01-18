@@ -6,9 +6,9 @@ import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional, Tuple
 
-from openai import OpenAI, APIError
+from openai import APIError, OpenAI
 from tqdm import tqdm
 
 from .constants import (
@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 class AudioTranscriber:
     """
     Main orchestrator for audio transcription workflow.
-    
+
     Handles the complete pipeline: segmentation -> transcription -> merging.
     """
 
@@ -63,6 +63,7 @@ class AudioTranscriber:
         self,
         file_path: Path,
         output_dir: Path,
+        segments_dir: Optional[Path] = None,
         segment_length: int = DEFAULT_SEGMENT_LENGTH,
         overlap: int = DEFAULT_OVERLAP,
         language: Optional[str] = None,
@@ -79,7 +80,8 @@ class AudioTranscriber:
 
         Args:
             file_path: Path to input audio file
-            output_dir: Directory for output files
+            output_dir: Directory for final transcription output
+            segments_dir: Directory for temporary segment files (default: output_dir)
             segment_length: Segment length in seconds
             overlap: Overlap between segments in seconds
             language: ISO-639-1 language code (e.g., 'en', 'de')
@@ -105,8 +107,12 @@ class AudioTranscriber:
         logger.info(f"{'='*70}")
 
         # Check if already processed
+        # Include original extension in output name to avoid collisions
+        # e.g., test.mp3 -> test_mp3_full.text, test.wav -> test_wav_full.text
         file_stem = file_path.stem
-        output_file = output_dir / f"{file_stem}_full.{response_format}"
+        file_ext = file_path.suffix.lstrip('.')  # Remove leading dot
+        output_filename = f"{file_stem}_{file_ext}_full.{response_format}" if file_ext else f"{file_stem}_full.{response_format}"
+        output_file = output_dir / output_filename
 
         if skip_existing and output_file.exists():
             logger.info(f"Output already exists, skipping: {output_file.name}")
@@ -121,10 +127,13 @@ class AudioTranscriber:
 
         logger.info(f"Duration: {format_duration(duration_seconds)}")
 
+        # Use separate segments directory if provided, otherwise use output_dir
+        seg_dir = segments_dir if segments_dir is not None else output_dir
+
         # Create segments
         try:
             segment_files = self.segmenter.segment_audio(
-                file_path, segment_length, overlap, output_dir
+                file_path, segment_length, overlap, seg_dir
             )
         except Exception as e:
             logger.error(f"Segmentation failed: {e}")
@@ -163,9 +172,7 @@ class AudioTranscriber:
                 "failed_segments": failed_count,
             }
 
-        logger.info(
-            f"Transcribed {len(transcriptions)}/{len(segment_files)} segments successfully"
-        )
+        logger.info(f"Transcribed {len(transcriptions)}/{len(segment_files)} segments successfully")
 
         # Merge transcriptions
         try:
@@ -226,14 +233,14 @@ class AudioTranscriber:
         temperature: float,
         prompt: Optional[str],
         concurrency: int,
-    ) -> tuple[List[str], int]:
+    ) -> Tuple[List[str], int]:
         """
         Transcribe segments in parallel.
 
         Returns:
             Tuple of (transcription_list, failed_count)
         """
-        transcriptions = [None] * len(segment_files)  # Preserve order
+        transcriptions: List[Optional[str]] = [None] * len(segment_files)  # Preserve order
         failed_count = 0
 
         logger.info(f"Transcribing {len(segment_files)} segments (concurrency: {concurrency})...")
@@ -311,7 +318,11 @@ class AudioTranscriber:
                 if response_format == "text":
                     return response if isinstance(response, str) else str(response)
                 else:
-                    return response.model_dump_json() if hasattr(response, "model_dump_json") else str(response)
+                    return (
+                        response.model_dump_json()
+                        if hasattr(response, "model_dump_json")
+                        else str(response)
+                    )
 
             except APIError as e:
                 retry_count += 1

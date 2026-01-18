@@ -1,0 +1,82 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Tests
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Documentation
+docs/
+*.md
+!README.md
+!LICENSE
+
+# Examples
+examples/
+
+# CI/CD
+.github/
+
+# Local files
+transcriptions/
+input/
+output/
+*.mp3
+*.wav
+*.m4a
+*.flac
+*.ogg
+
+# Temporary files
+*.log
+*.tmp
+temp/
+tmp/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore

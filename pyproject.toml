@@ -68,6 +68,7 @@ Changelog = "https://github.com/lucmuss/audio-transcriber/releases"
 
 [project.scripts]
 audio-transcriber = "audio_transcriber.cli:main"
+audio-transcriber-gui = "audio_transcriber.gui:main"
 
 [tool.setuptools]
 packages = ["audio_transcriber"]

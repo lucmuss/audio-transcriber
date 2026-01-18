@@ -9,6 +9,7 @@ Professional audio transcription tool using OpenAI-compatible Speech-to-Text API
 
 ## ✨ Features
 
+- **🖥️ GUI & CLI Interfaces** - Benutzerfreundliche grafische Oberfläche + leistungsstarkes Command-Line-Tool
 - **🔄 Intelligent Segmentation** - Automatically splits large audio files into processable chunks
 - **⚡ Parallel Processing** - Concurrent transcription of multiple segments for faster results
 - **🎯 Smart Merging** - Overlap detection and removal for seamless final transcripts
@@ -19,6 +20,7 @@ Professional audio transcription tool using OpenAI-compatible Speech-to-Text API
 - **📊 Progress Tracking** - Real-time progress bars and detailed statistics
 - **🌐 Language Detection** - Automatic language detection from audio
 - **💰 Cost Estimation** - Calculates estimated transcription costs
+- **📁 Separate Output Folders** - Transcriptions and segments in dedicated folders
 
 ## 📋 Table of Contents
 
@@ -77,6 +79,8 @@ pip install -e ".[dev]"
 
 ## ⚡ Quick Start
 
+### CLI (Command Line)
+
 ```bash
 # Set your API key
 export AUDIO_TRANSCRIBE_API_KEY="sk-..."
@@ -89,6 +93,22 @@ audio-transcriber --input ./audio_files
 ```
 
 Output will be saved to `./transcriptions/` by default.
+
+### GUI (Graphical Interface)
+
+```bash
+# Start the GUI
+audio-transcriber-gui
+```
+
+Die GUI bietet:
+- 📁 **Einfache Dateiauswahl** - Browse-Buttons for Dateien und Ordner
+- 🔌 **API-Konfiguration** - Visuelle Eingabe für alle API-Einstellungen
+- ⚙️ **Alle Optionen** - Segment-Länge, Parallelität, Sprache, etc.
+- 📊 **Live-Fortschritt** - Echtzeit-Log-Ausgabe während der Verarbeitung
+- 🎯 **Tooltips & Hilfe** - Provider-Beispiele und Tipps direkt in der GUI
+
+Siehe [GUI_GUIDE.md](GUI_GUIDE.md) für detaillierte Anleitungen.
 
 ## 📚 Usage Examples
 

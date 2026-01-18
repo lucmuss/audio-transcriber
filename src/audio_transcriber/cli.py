@@ -108,7 +108,13 @@ For more information: https://github.com/lucmuss/audio-transcriber
         "--output-dir",
         type=str,
         default=os.getenv(f"{ENV_PREFIX}OUTPUT_DIR", "./transcriptions"),
-        help="Output directory (default: ./transcriptions)",
+        help="Output directory for final transcriptions (default: ./transcriptions)",
+    )
+    output_group.add_argument(
+        "--segments-dir",
+        type=str,
+        default=os.getenv(f"{ENV_PREFIX}SEGMENTS_DIR", "./segments"),
+        help="Output directory for temporary segments (default: ./segments)",
     )
     output_group.add_argument(
         "-f",
@@ -256,19 +262,21 @@ def print_summary(results: List[dict], verbose: bool = False) -> None:
     skipped = sum(1 for r in results if r.get("status") == "skipped")
     failed = sum(1 for r in results if r.get("status") == "error")
 
-    total_duration = sum(r.get("duration_seconds", 0) for r in results if r.get("status") == "success")
+    total_duration = sum(
+        r.get("duration_seconds", 0) for r in results if r.get("status") == "success"
+    )
     total_segments = sum(r.get("segments", 0) for r in results)
     failed_segments = sum(r.get("failed", 0) for r in results)
 
-    print("\n" + "="*70)
+    print("\n" + "=" * 70)
     print("TRANSCRIPTION SUMMARY")
-    print("="*70)
+    print("=" * 70)
     print(f"Files processed:     {successful}")
     print(f"Files skipped:       {skipped}")
     print(f"Files failed:        {failed}")
     print(f"Total segments:      {total_segments}")
     print(f"Failed segments:     {failed_segments}")
-    
+
     if total_duration > 0:
         print(f"Total duration:      {format_duration(total_duration)}")
         cost = estimate_cost(total_duration / 60, WHISPER_PRICE_PER_MINUTE)
@@ -277,10 +285,14 @@ def print_summary(results: List[dict], verbose: bool = False) -> None:
     if verbose and results:
         print("\nDetailed results:")
         for r in results:
-            status_icon = "✓" if r.get("status") == "success" else ("⊘" if r.get("status") == "skipped" else "✗")
+            status_icon = (
+                "✓"
+                if r.get("status") == "success"
+                else ("⊘" if r.get("status") == "skipped" else "✗")
+            )
             print(f"  {status_icon} {Path(r['file']).name} - {r.get('status')}")
 
-    print("="*70 + "\n")
+    print("=" * 70 + "\n")
 
 
 def main() -> int:
@@ -310,7 +322,7 @@ def main() -> int:
     # Dry-run mode
     if args.dry_run:
         print("\n*** DRY RUN MODE ***")
-        print(f"Configuration:")
+        print("Configuration:")
         print(f"  Model:           {args.model}")
         print(f"  Base URL:        {args.base_url}")
         print(f"  Segment length:  {args.segment_length}s")
@@ -337,6 +349,7 @@ def main() -> int:
         result = transcriber.transcribe_file(
             file_path=audio_file,
             output_dir=output_dir,
+            segments_dir=Path(args.segments_dir),
             segment_length=args.segment_length,
             overlap=args.overlap,
             language=args.language,

@@ -9,9 +9,9 @@ __version__ = "1.0.0"
 __author__ = "Audio Transcriber Contributors"
 __license__ = "MIT"
 
-from .transcriber import AudioTranscriber
-from .segmenter import AudioSegmenter
 from .merger import TranscriptionMerger
+from .segmenter import AudioSegmenter
+from .transcriber import AudioTranscriber
 
 __all__ = [
     "AudioTranscriber",

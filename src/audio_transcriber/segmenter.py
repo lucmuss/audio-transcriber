@@ -75,8 +75,7 @@ class AudioSegmenter:
 
         logger.info(f"Audio duration: {format_duration(total_duration_seconds)}")
         logger.debug(
-            f"Original format - Sample rate: {audio.frame_rate}Hz, "
-            f"Channels: {audio.channels}"
+            f"Original format - Sample rate: {audio.frame_rate}Hz, " f"Channels: {audio.channels}"
         )
 
         # Calculate segmentation parameters
@@ -101,9 +100,7 @@ class AudioSegmenter:
 
             # Optimize for transcription: normalize to mono 16kHz
             if segment.frame_rate != self.sample_rate or segment.channels != self.channels:
-                segment = segment.set_frame_rate(self.sample_rate).set_channels(
-                    self.channels
-                )
+                segment = segment.set_frame_rate(self.sample_rate).set_channels(self.channels)
 
             # Export as optimized MP3
             file_stem = file_path.stem

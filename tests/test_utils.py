@@ -2,13 +2,15 @@
 Tests for utility functions.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from audio_transcriber.utils import (
-    format_duration,
     estimate_cost,
-    validate_segment_params,
     find_audio_files,
+    format_duration,
+    validate_segment_params,
 )
 
 

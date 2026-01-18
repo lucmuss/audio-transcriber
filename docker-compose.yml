@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  audio-transcriber:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: audio-transcriber:latest
+    container_name: audio-transcriber
+    
+    # Environment variables
+    environment:
+      - AUDIO_TRANSCRIBE_API_KEY=${AUDIO_TRANSCRIBE_API_KEY}
+      - AUDIO_TRANSCRIBE_BASE_URL=${AUDIO_TRANSCRIBE_BASE_URL:-https://api.openai.com/v1}
+      - AUDIO_TRANSCRIBE_MODEL=${AUDIO_TRANSCRIBE_MODEL:-whisper-1}
+      - AUDIO_TRANSCRIBE_OUTPUT_DIR=/app/output
+      - AUDIO_TRANSCRIBE_SEGMENT_LENGTH=${AUDIO_TRANSCRIBE_SEGMENT_LENGTH:-600}
+      - AUDIO_TRANSCRIBE_OVERLAP=${AUDIO_TRANSCRIBE_OVERLAP:-10}
+      - AUDIO_TRANSCRIBE_CONCURRENCY=${AUDIO_TRANSCRIBE_CONCURRENCY:-4}
+    
+    # Volume mounts
+    volumes:
+      - ./input:/app/input:ro         # Read-only input directory
+      - ./output:/app/output          # Output directory
+      - ./transcriptions:/app/transcriptions  # Alternative output
+    
+    # Override default command
+    # Example: docker-compose run audio-transcriber --input /app/input/podcast.mp3
+    command: ["--help"]
+    
+    # Resource limits (optional)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 512M

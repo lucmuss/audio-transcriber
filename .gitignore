@@ -145,6 +145,7 @@ cython_debug/
 
 # Project specific
 transcriptions/
+segments/
 *.mp3
 *.wav
 *.m4a
