@@ -16,6 +16,8 @@ from .constants import (
     DEFAULT_OVERLAP,
     DEFAULT_RESPONSE_FORMAT,
     DEFAULT_SEGMENT_LENGTH,
+    DEFAULT_SUMMARY_MODEL,
+    DEFAULT_SUMMARY_PROMPT,
     DEFAULT_TEMPERATURE,
     ENV_PREFIX,
     VALID_RESPONSE_FORMATS,
@@ -181,6 +183,32 @@ For more information: https://github.com/lucmuss/audio-transcriber
         type=int,
         default=int(os.getenv(f"{ENV_PREFIX}CONCURRENCY", str(DEFAULT_CONCURRENCY))),
         help=f"Number of parallel transcriptions (default: {DEFAULT_CONCURRENCY})",
+    )
+
+    # Summarization parameters
+    summary_group = parser.add_argument_group("summarization parameters")
+    summary_group.add_argument(
+        "--summarize",
+        action="store_true",
+        help="Generate a summary of the transcription",
+    )
+    summary_group.add_argument(
+        "--summary-dir",
+        type=str,
+        default=os.getenv(f"{ENV_PREFIX}SUMMARY_DIR", "./summaries"),
+        help="Output directory for summaries (default: ./summaries)",
+    )
+    summary_group.add_argument(
+        "--summary-model",
+        type=str,
+        default=os.getenv(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL),
+        help=f"Model for summarization (default: {DEFAULT_SUMMARY_MODEL})",
+    )
+    summary_group.add_argument(
+        "--summary-prompt",
+        type=str,
+        default=DEFAULT_SUMMARY_PROMPT,
+        help="Custom prompt for summary generation",
     )
 
     # Behavior options
@@ -362,6 +390,17 @@ def main() -> int:
             skip_existing=args.skip_existing,
         )
         results.append(result)
+        
+        # Generate summary if requested and transcription was successful
+        if args.summarize and result.get("status") == "success":
+            summary_result = transcriber.summarize_transcription(
+                transcription_file=Path(result["output"]),
+                summary_dir=Path(args.summary_dir),
+                summary_model=args.summary_model,
+                summary_prompt=args.summary_prompt,
+                skip_existing=args.skip_existing,
+            )
+            result["summary"] = summary_result
 
     # Print summary
     print_summary(results, verbose=args.verbose)

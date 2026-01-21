@@ -17,6 +17,8 @@ from .constants import (
     DEFAULT_OVERLAP,
     DEFAULT_RESPONSE_FORMAT,
     DEFAULT_SEGMENT_LENGTH,
+    DEFAULT_SUMMARY_MODEL,
+    DEFAULT_SUMMARY_PROMPT,
     DEFAULT_TEMPERATURE,
     ENV_PREFIX,
     VALID_RESPONSE_FORMATS,
@@ -32,7 +34,7 @@ class AudioTranscriberGUI:
     def __init__(self, root: tk.Tk):
         """Initialize the GUI."""
         self.root = root
-        self.root.geometry("900x800")
+        self.root.geometry("900x900")
         self.root.resizable(True, True)
 
         # Initialize i18n (detect system language or default to English)
@@ -70,6 +72,12 @@ class AudioTranscriberGUI:
         self.keep_segments = tk.BooleanVar(value=False)
         self.skip_existing = tk.BooleanVar(value=True)
         self.verbose = tk.BooleanVar(value=False)
+
+        # Summarization
+        self.summarize = tk.BooleanVar(value=False)
+        self.summary_dir = tk.StringVar(value="./summaries")
+        self.summary_model = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL))
+        self.summary_prompt = tk.StringVar(value=DEFAULT_SUMMARY_PROMPT)
 
         # Processing state
         self.is_processing = False
@@ -152,6 +160,11 @@ class AudioTranscriberGUI:
         self.trans_frame = ttk.Frame(self.notebook)
         self.notebook.add(self.trans_frame, text=self.i18n.get("tab_transcription"))
         self.create_transcription_tab(self.trans_frame)
+
+        # Tab 5: Summarization Settings
+        self.summary_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.summary_frame, text="Zusammenfassung")
+        self.create_summarization_tab(self.summary_frame)
 
         # Bottom: Progress and Control
         self.create_bottom_section()
@@ -253,38 +266,52 @@ class AudioTranscriberGUI:
 
     def create_api_tab(self, parent: ttk.Frame):
         """Create API configuration tab."""
-        api_frame = ttk.LabelFrame(parent, text="API Einstellungen", padding=10)
-        api_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.api_settings_frame = ttk.LabelFrame(parent, text=self.i18n.get("api_settings"), padding=10)
+        self.api_settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.widgets_to_translate["api_settings_frame"] = ("api_settings", self.api_settings_frame)
 
         # API Key
-        ttk.Label(api_frame, text="API Key:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        api_entry = ttk.Entry(api_frame, textvariable=self.api_key, width=50, show="*")
+        api_key_label = ttk.Label(self.api_settings_frame, text=self.i18n.get("api_key_label"))
+        api_key_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.widgets_to_translate["api_key_label"] = ("api_key_label", api_key_label)
+        
+        api_entry = ttk.Entry(self.api_settings_frame, textvariable=self.api_key, width=50, show="*")
         api_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
 
-        ttk.Button(
-            api_frame, text="Anzeigen", command=lambda: self.toggle_password(api_entry)
-        ).grid(row=0, column=2, padx=2)
+        self.show_password_btn = ttk.Button(
+            self.api_settings_frame, text=self.i18n.get("show_password"), command=lambda: self.toggle_password(api_entry)
+        )
+        self.show_password_btn.grid(row=0, column=2, padx=2)
+        self.widgets_to_translate["show_password_btn"] = ("show_password", self.show_password_btn)
 
         # Base URL
-        ttk.Label(api_frame, text="Base URL:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        ttk.Entry(api_frame, textvariable=self.base_url, width=50).grid(
+        base_url_label = ttk.Label(self.api_settings_frame, text=self.i18n.get("base_url_label"))
+        base_url_label.grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.widgets_to_translate["base_url_label"] = ("base_url_label", base_url_label)
+        
+        ttk.Entry(self.api_settings_frame, textvariable=self.base_url, width=50).grid(
             row=1, column=1, padx=5, pady=5, sticky=tk.W
         )
 
         # Model
-        ttk.Label(api_frame, text="Model:").grid(row=2, column=0, sticky=tk.W, pady=5)
-        ttk.Entry(api_frame, textvariable=self.model, width=50).grid(
+        model_label = ttk.Label(self.api_settings_frame, text=self.i18n.get("model_label"))
+        model_label.grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.widgets_to_translate["model_label"] = ("model_label", model_label)
+        
+        ttk.Entry(self.api_settings_frame, textvariable=self.model, width=50).grid(
             row=2, column=1, padx=5, pady=5, sticky=tk.W
         )
 
         # Info Frame
-        info_frame = ttk.LabelFrame(parent, text="ℹ️ Provider-Beispiele", padding=10)
-        info_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.provider_examples_frame = ttk.LabelFrame(parent, text=self.i18n.get("provider_examples"), padding=10)
+        self.provider_examples_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.widgets_to_translate["provider_examples_frame"] = ("provider_examples", self.provider_examples_frame)
 
         info_text = """
 OpenAI:
   Base URL: https://api.openai.com/v1
-  Model: whisper-1
+  Models: whisper-1, gpt-4o-transcribe, gpt-4o-mini-transcribe,
+          gpt-4o-mini-transcribe-2025-12-15
 
 Groq:
   Base URL: https://api.groq.com/openai/v1
@@ -300,71 +327,85 @@ Together.ai:
   Model: whisper-large-v3
         """
 
-        ttk.Label(info_frame, text=info_text, justify=tk.LEFT, font=("Courier", 9)).pack(
+        ttk.Label(self.provider_examples_frame, text=info_text, justify=tk.LEFT, font=("Courier", 9)).pack(
             anchor=tk.W
         )
 
     def create_advanced_tab(self, parent: ttk.Frame):
         """Create advanced settings tab."""
         # Segmentation Frame
-        seg_frame = ttk.LabelFrame(parent, text="Segmentierungs-Parameter", padding=10)
-        seg_frame.pack(fill=tk.X, padx=10, pady=10)
+        self.seg_params_frame = ttk.LabelFrame(parent, text=self.i18n.get("segmentation_params"), padding=10)
+        self.seg_params_frame.pack(fill=tk.X, padx=10, pady=10)
+        self.widgets_to_translate["seg_params_frame"] = ("segmentation_params", self.seg_params_frame)
 
-        ttk.Label(seg_frame, text="Segment-Länge (Sekunden):").grid(
-            row=0, column=0, sticky=tk.W, pady=5
-        )
-        ttk.Spinbox(seg_frame, from_=60, to=1800, textvariable=self.segment_length, width=10).grid(
+        seg_length_label = ttk.Label(self.seg_params_frame, text=self.i18n.get("segment_length_label"))
+        seg_length_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.widgets_to_translate["seg_length_label"] = ("segment_length_label", seg_length_label)
+        
+        ttk.Spinbox(self.seg_params_frame, from_=60, to=1800, textvariable=self.segment_length, width=10).grid(
             row=0, column=1, padx=5, pady=5, sticky=tk.W
         )
 
-        ttk.Label(seg_frame, text="Überlappung (Sekunden):").grid(
-            row=1, column=0, sticky=tk.W, pady=5
-        )
-        ttk.Spinbox(seg_frame, from_=0, to=60, textvariable=self.overlap, width=10).grid(
+        overlap_label = ttk.Label(self.seg_params_frame, text=self.i18n.get("overlap_label"))
+        overlap_label.grid(row=1, column=0, sticky=tk.W, pady=5)
+        self.widgets_to_translate["overlap_label"] = ("overlap_label", overlap_label)
+        
+        ttk.Spinbox(self.seg_params_frame, from_=0, to=60, textvariable=self.overlap, width=10).grid(
             row=1, column=1, padx=5, pady=5, sticky=tk.W
         )
 
         # Performance Frame
-        perf_frame = ttk.LabelFrame(parent, text="Performance", padding=10)
-        perf_frame.pack(fill=tk.X, padx=10, pady=10)
+        self.perf_frame = ttk.LabelFrame(parent, text=self.i18n.get("performance"), padding=10)
+        self.perf_frame.pack(fill=tk.X, padx=10, pady=10)
+        self.widgets_to_translate["perf_frame"] = ("performance", self.perf_frame)
 
-        ttk.Label(perf_frame, text="Parallele Transkriptionen:").grid(
-            row=0, column=0, sticky=tk.W, pady=5
-        )
-        ttk.Spinbox(perf_frame, from_=1, to=16, textvariable=self.concurrency, width=10).grid(
+        parallel_label = ttk.Label(self.perf_frame, text=self.i18n.get("parallel_transcriptions_label"))
+        parallel_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.widgets_to_translate["parallel_label"] = ("parallel_transcriptions_label", parallel_label)
+        
+        ttk.Spinbox(self.perf_frame, from_=1, to=16, textvariable=self.concurrency, width=10).grid(
             row=0, column=1, padx=5, pady=5, sticky=tk.W
         )
 
     def create_transcription_tab(self, parent: ttk.Frame):
         """Create transcription settings tab."""
-        trans_frame = ttk.LabelFrame(parent, text="Transkriptions-Einstellungen", padding=10)
-        trans_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.trans_settings_frame = ttk.LabelFrame(parent, text=self.i18n.get("transcription_settings"), padding=10)
+        self.trans_settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.widgets_to_translate["trans_settings_frame"] = ("transcription_settings", self.trans_settings_frame)
 
         # Language
-        ttk.Label(trans_frame, text="Sprache (ISO-639-1):").grid(
-            row=0, column=0, sticky=tk.W, pady=5
-        )
-        lang_entry = ttk.Entry(trans_frame, textvariable=self.language, width=10)
+        lang_iso_label = ttk.Label(self.trans_settings_frame, text=self.i18n.get("language_iso_label"))
+        lang_iso_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+        self.widgets_to_translate["lang_iso_label"] = ("language_iso_label", lang_iso_label)
+        
+        lang_entry = ttk.Entry(self.trans_settings_frame, textvariable=self.language, width=10)
         lang_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
-        ttk.Label(trans_frame, text="(z.B. 'en', 'de', leer für Auto-Detect)", font=("", 9)).grid(
-            row=0, column=2, sticky=tk.W, padx=5
-        )
+        
+        lang_hint_label = ttk.Label(self.trans_settings_frame, text=self.i18n.get("language_hint"), font=("", 9))
+        lang_hint_label.grid(row=0, column=2, sticky=tk.W, padx=5)
+        self.widgets_to_translate["lang_hint_label"] = ("language_hint", lang_hint_label)
 
-        ttk.Checkbutton(
-            trans_frame, text="Sprache automatisch erkennen", variable=self.detect_language
-        ).grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=2)
+        self.auto_detect_check = ttk.Checkbutton(
+            self.trans_settings_frame, text=self.i18n.get("auto_detect_language"), variable=self.detect_language
+        )
+        self.auto_detect_check.grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=2)
+        self.widgets_to_translate["auto_detect_check"] = ("auto_detect_language", self.auto_detect_check)
 
         # Temperature
-        ttk.Label(trans_frame, text="Temperature (0.0-1.0):").grid(
-            row=2, column=0, sticky=tk.W, pady=5
-        )
+        temp_label = ttk.Label(self.trans_settings_frame, text=self.i18n.get("temperature_label"))
+        temp_label.grid(row=2, column=0, sticky=tk.W, pady=5)
+        self.widgets_to_translate["temp_label"] = ("temperature_label", temp_label)
+        
         ttk.Spinbox(
-            trans_frame, from_=0.0, to=1.0, increment=0.1, textvariable=self.temperature, width=10
+            self.trans_settings_frame, from_=0.0, to=1.0, increment=0.1, textvariable=self.temperature, width=10
         ).grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
 
         # Prompt
-        ttk.Label(trans_frame, text="Kontext-Prompt:").grid(row=3, column=0, sticky=tk.NW, pady=5)
-        prompt_text = tk.Text(trans_frame, width=50, height=4)
+        prompt_label = ttk.Label(self.trans_settings_frame, text=self.i18n.get("context_prompt_label"))
+        prompt_label.grid(row=3, column=0, sticky=tk.NW, pady=5)
+        self.widgets_to_translate["prompt_label"] = ("context_prompt_label", prompt_label)
+        
+        prompt_text = tk.Text(self.trans_settings_frame, width=50, height=4)
         prompt_text.grid(row=3, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
         prompt_text.insert("1.0", self.prompt.get())
 
@@ -374,11 +415,88 @@ Together.ai:
 
         prompt_text.bind("<KeyRelease>", update_prompt)
 
-        ttk.Label(
-            trans_frame,
-            text="Tipp: Namen, Fachbegriffe für bessere Genauigkeit",
+        prompt_tip_label = ttk.Label(
+            self.trans_settings_frame,
+            text=self.i18n.get("prompt_tip"),
             font=("", 9),
-        ).grid(row=4, column=1, columnspan=2, sticky=tk.W, padx=5)
+        )
+        prompt_tip_label.grid(row=4, column=1, columnspan=2, sticky=tk.W, padx=5)
+        self.widgets_to_translate["prompt_tip_label"] = ("prompt_tip", prompt_tip_label)
+
+    def create_summarization_tab(self, parent: ttk.Frame):
+        """Create summarization settings tab."""
+        # Enable Summarization
+        self.summarize_check = ttk.Checkbutton(
+            parent, text="Zusammenfassung erstellen", variable=self.summarize
+        )
+        self.summarize_check.pack(anchor=tk.W, padx=10, pady=10)
+        
+        # Summary Settings Frame
+        self.summary_settings_frame = ttk.LabelFrame(parent, text="Zusammenfassungs-Einstellungen", padding=10)
+        self.summary_settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Summary Directory
+        summary_dir_label = ttk.Label(self.summary_settings_frame, text="Summary-Ordner:")
+        summary_dir_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+        
+        ttk.Entry(self.summary_settings_frame, textvariable=self.summary_dir, width=50).grid(
+            row=0, column=1, padx=5, pady=5
+        )
+        
+        browse_summary_btn = ttk.Button(
+            self.summary_settings_frame, text="Durchsuchen", command=self.browse_summary_dir
+        )
+        browse_summary_btn.grid(row=0, column=2, padx=2)
+
+        # Summary Model
+        summary_model_label = ttk.Label(self.summary_settings_frame, text="Summary-Modell:")
+        summary_model_label.grid(row=1, column=0, sticky=tk.W, pady=5)
+        
+        ttk.Entry(self.summary_settings_frame, textvariable=self.summary_model, width=50).grid(
+            row=1, column=1, padx=5, pady=5, sticky=tk.W
+        )
+        
+        model_hint = ttk.Label(
+            self.summary_settings_frame, 
+            text="(z.B. gpt-4o-mini, gpt-4, gpt-3.5-turbo)", 
+            font=("", 9)
+        )
+        model_hint.grid(row=1, column=2, sticky=tk.W, padx=5)
+
+        # Summary Prompt
+        summary_prompt_label = ttk.Label(self.summary_settings_frame, text="Summary-Prompt:")
+        summary_prompt_label.grid(row=2, column=0, sticky=tk.NW, pady=5)
+        
+        summary_prompt_text = tk.Text(self.summary_settings_frame, width=50, height=6)
+        summary_prompt_text.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
+        summary_prompt_text.insert("1.0", self.summary_prompt.get())
+
+        # Bind text widget to variable
+        def update_summary_prompt(*args):
+            self.summary_prompt.set(summary_prompt_text.get("1.0", tk.END).strip())
+
+        summary_prompt_text.bind("<KeyRelease>", update_summary_prompt)
+
+        summary_tip_label = ttk.Label(
+            self.summary_settings_frame,
+            text="Beschreiben Sie, wie die Zusammenfassung erstellt werden soll",
+            font=("", 9),
+        )
+        summary_tip_label.grid(row=3, column=1, columnspan=2, sticky=tk.W, padx=5)
+
+        # Info Frame
+        info_frame = ttk.LabelFrame(parent, text="Information", padding=10)
+        info_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        info_text = """Die Zusammenfassungs-Funktion nutzt ein LLM (Large Language Model), 
+um automatisch eine prägnante Zusammenfassung der Transkription zu erstellen. 
+
+Die Zusammenfassung wird im angegebenen Summary-Ordner gespeichert.
+
+Hinweis: Dies verursacht zusätzliche API-Kosten basierend auf der 
+Länge der Transkription und dem gewählten Modell."""
+        
+        ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(anchor=tk.W)
 
     def create_bottom_section(self):
         """Create bottom section with progress and control buttons."""
@@ -386,12 +504,13 @@ Together.ai:
         bottom_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Progress Section
-        progress_frame = ttk.LabelFrame(bottom_frame, text="Fortschritt", padding=10)
-        progress_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        self.progress_frame = ttk.LabelFrame(bottom_frame, text=self.i18n.get("progress"), padding=10)
+        self.progress_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        self.widgets_to_translate["progress_frame"] = ("progress", self.progress_frame)
 
         # Log output
         self.log_text = scrolledtext.ScrolledText(
-            progress_frame, height=10, width=80, state=tk.DISABLED, wrap=tk.WORD
+            self.progress_frame, height=10, width=80, state=tk.DISABLED, wrap=tk.WORD
         )
         self.log_text.pack(fill=tk.BOTH, expand=True)
 
@@ -401,24 +520,26 @@ Together.ai:
 
         self.start_button = ttk.Button(
             button_frame,
-            text="▶ Transkription starten",
+            text=self.i18n.get("start_transcription_btn"),
             command=self.start_transcription,
             style="Accent.TButton",
         )
         self.start_button.pack(side=tk.LEFT, padx=5)
+        self.widgets_to_translate["start_button"] = ("start_transcription_btn", self.start_button)
 
         self.stop_button = ttk.Button(
-            button_frame, text="⏹ Stoppen", command=self.stop_transcription, state=tk.DISABLED
+            button_frame, text=self.i18n.get("stop_btn"), command=self.stop_transcription, state=tk.DISABLED
         )
         self.stop_button.pack(side=tk.LEFT, padx=5)
+        self.widgets_to_translate["stop_button"] = ("stop_btn", self.stop_button)
 
-        ttk.Button(button_frame, text="🗑 Log löschen", command=self.clear_log).pack(
-            side=tk.LEFT, padx=5
-        )
+        self.clear_log_button = ttk.Button(button_frame, text=self.i18n.get("clear_log_btn"), command=self.clear_log)
+        self.clear_log_button.pack(side=tk.LEFT, padx=5)
+        self.widgets_to_translate["clear_log_button"] = ("clear_log_btn", self.clear_log_button)
 
-        ttk.Button(button_frame, text="❌ Beenden", command=self.root.quit).pack(
-            side=tk.RIGHT, padx=5
-        )
+        self.quit_button = ttk.Button(button_frame, text=self.i18n.get("quit_btn"), command=self.root.quit)
+        self.quit_button.pack(side=tk.RIGHT, padx=5)
+        self.widgets_to_translate["quit_button"] = ("quit_btn", self.quit_button)
 
     def browse_file(self):
         """Browse for audio file."""
@@ -449,6 +570,12 @@ Together.ai:
         directory = filedialog.askdirectory(title="Segment-Ordner wählen")
         if directory:
             self.segments_dir.set(directory)
+
+    def browse_summary_dir(self):
+        """Browse for summary directory."""
+        directory = filedialog.askdirectory(title="Summary-Ordner wählen")
+        if directory:
+            self.summary_dir.set(directory)
 
     def toggle_password(self, entry: ttk.Entry):
         """Toggle password visibility."""
@@ -572,6 +699,27 @@ Together.ai:
                     if result["status"] == "success":
                         successful += 1
                         self.log_message(f"✅ Erfolgreich: {result['output']}")
+                        
+                        # Generate summary if requested
+                        if self.summarize.get():
+                            self.log_message("📝 Erstelle Zusammenfassung...")
+                            try:
+                                summary_result = transcriber.summarize_transcription(
+                                    transcription_file=Path(result["output"]),
+                                    summary_dir=Path(self.summary_dir.get()),
+                                    summary_model=self.summary_model.get(),
+                                    summary_prompt=self.summary_prompt.get(),
+                                    skip_existing=self.skip_existing.get(),
+                                )
+                                if summary_result["status"] == "success":
+                                    self.log_message(f"✅ Summary erstellt: {summary_result['summary_file']}")
+                                elif summary_result["status"] == "skipped":
+                                    self.log_message("⊘ Summary übersprungen: bereits vorhanden")
+                                else:
+                                    self.log_message(f"⚠️ Summary-Fehler: {summary_result.get('error', 'Unbekannt')}")
+                            except Exception as e:
+                                self.log_message(f"⚠️ Summary-Ausnahme: {e}")
+                                
                     elif result["status"] == "skipped":
                         self.log_message("⊘ Übersprungen: bereits vorhanden")
                     else:
@@ -631,7 +779,7 @@ Together.ai:
         # Update tab titles
         self.notebook.tab(0, text=_.get("tab_main"))
         self.notebook.tab(1, text=_.get("tab_api"))
-        self.notebook.tab(2, text=_.get("tab_advanced"))
+        self.notebook.tab(2, text="Segmente")
         self.notebook.tab(3, text=_.get("tab_transcription"))
 
         # Update LabelFrame texts

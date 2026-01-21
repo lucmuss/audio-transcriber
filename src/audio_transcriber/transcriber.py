@@ -18,6 +18,8 @@ from .constants import (
     DEFAULT_OVERLAP,
     DEFAULT_RESPONSE_FORMAT,
     DEFAULT_SEGMENT_LENGTH,
+    DEFAULT_SUMMARY_MODEL,
+    DEFAULT_SUMMARY_PROMPT,
     DEFAULT_TEMPERATURE,
 )
 from .merger import TranscriptionMerger
@@ -74,6 +76,7 @@ class AudioTranscriber:
         prompt: Optional[str] = None,
         keep_segments: bool = False,
         skip_existing: bool = True,
+        save_segment_transcriptions: bool = True,
     ) -> Dict[str, Any]:
         """
         Transcribe a single audio file.
@@ -110,8 +113,12 @@ class AudioTranscriber:
         # Include original extension in output name to avoid collisions
         # e.g., test.mp3 -> test_mp3_full.text, test.wav -> test_wav_full.text
         file_stem = file_path.stem
-        file_ext = file_path.suffix.lstrip('.')  # Remove leading dot
-        output_filename = f"{file_stem}_{file_ext}_full.{response_format}" if file_ext else f"{file_stem}_full.{response_format}"
+        file_ext = file_path.suffix.lstrip(".")  # Remove leading dot
+        output_filename = (
+            f"{file_stem}_{file_ext}_full.{response_format}"
+            if file_ext
+            else f"{file_stem}_full.{response_format}"
+        )
         output_file = output_dir / output_filename
 
         if skip_existing and output_file.exists():
@@ -160,6 +167,9 @@ class AudioTranscriber:
             temperature=temperature,
             prompt=prompt,
             concurrency=concurrency,
+            output_dir=output_dir if save_segment_transcriptions else None,
+            file_stem=file_stem,
+            file_ext=file_ext,
         )
 
         if not transcriptions:
@@ -233,9 +243,17 @@ class AudioTranscriber:
         temperature: float,
         prompt: Optional[str],
         concurrency: int,
+        output_dir: Optional[Path] = None,
+        file_stem: str = "",
+        file_ext: str = "",
     ) -> Tuple[List[str], int]:
         """
         Transcribe segments in parallel.
+
+        Args:
+            output_dir: If provided, save individual segment transcriptions
+            file_stem: Base filename for segment transcriptions
+            file_ext: File extension for segment transcriptions
 
         Returns:
             Tuple of (transcription_list, failed_count)
@@ -265,6 +283,22 @@ class AudioTranscriber:
                         result = future.result()
                         if result:
                             transcriptions[index] = result
+                            
+                            # Save individual segment transcription if output_dir is provided
+                            if output_dir:
+                                segment_num = index + 1
+                                segment_filename = (
+                                    f"{file_stem}_{file_ext}_segment_{segment_num:03d}.{response_format}"
+                                    if file_ext
+                                    else f"{file_stem}_segment_{segment_num:03d}.{response_format}"
+                                )
+                                segment_output_file = output_dir / segment_filename
+                                
+                                try:
+                                    segment_output_file.write_text(result, encoding="utf-8")
+                                    logger.debug(f"Saved segment transcription: {segment_filename}")
+                                except Exception as e:
+                                    logger.warning(f"Failed to save segment {segment_num} transcription: {e}")
                         else:
                             failed_count += 1
                             logger.warning(f"Segment {index + 1} failed")
@@ -359,3 +393,132 @@ class AudioTranscriber:
                 logger.warning(f"Failed to delete {seg_file.name}: {e}")
 
         logger.debug(f"Deleted {deleted} temporary segment files")
+
+    def summarize_transcription(
+        self,
+        transcription_file: Path,
+        summary_dir: Path,
+        summary_model: str = DEFAULT_SUMMARY_MODEL,
+        summary_prompt: str = DEFAULT_SUMMARY_PROMPT,
+        skip_existing: bool = True,
+    ) -> Dict[str, Any]:
+        """
+        Generate a summary of a transcription file.
+
+        Args:
+            transcription_file: Path to transcription file
+            summary_dir: Directory for summary output
+            summary_model: Model to use for summarization (e.g., 'gpt-4o-mini')
+            summary_prompt: Custom prompt for summary generation
+            skip_existing: Skip if summary file already exists
+
+        Returns:
+            Dictionary with summary results and metadata
+        """
+        logger.info(f"\n{'='*70}")
+        logger.info(f"Generating summary for: {transcription_file.name}")
+        logger.info(f"{'='*70}")
+
+        # Check if transcription file exists
+        if not transcription_file.exists():
+            logger.error(f"Transcription file not found: {transcription_file}")
+            return {
+                "transcription_file": str(transcription_file),
+                "status": "error",
+                "error": "Transcription file not found",
+            }
+
+        # Determine summary output filename
+        # e.g., test_mp3_full.text -> test_mp3_summary.txt
+        file_stem = transcription_file.stem.replace("_full", "")
+        summary_filename = f"{file_stem}_summary.txt"
+        summary_file = summary_dir / summary_filename
+
+        # Check if summary already exists
+        if skip_existing and summary_file.exists():
+            logger.info(f"Summary already exists, skipping: {summary_file.name}")
+            return {
+                "transcription_file": str(transcription_file),
+                "status": "skipped",
+                "summary_file": str(summary_file),
+            }
+
+        # Read transcription content
+        try:
+            transcription_text = transcription_file.read_text(encoding="utf-8")
+        except Exception as e:
+            logger.error(f"Failed to read transcription file: {e}")
+            return {
+                "transcription_file": str(transcription_file),
+                "status": "error",
+                "error": f"Failed to read file: {e}",
+            }
+
+        if not transcription_text.strip():
+            logger.warning("Transcription is empty, skipping summarization")
+            return {
+                "transcription_file": str(transcription_file),
+                "status": "skipped",
+                "error": "Empty transcription",
+            }
+
+        # Generate summary using chat completion API
+        logger.info(f"Using model: {summary_model}")
+        logger.info(f"Transcription length: {len(transcription_text)} characters")
+
+        try:
+            response = self.client.chat.completions.create(
+                model=summary_model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": summary_prompt,
+                    },
+                    {
+                        "role": "user",
+                        "content": transcription_text,
+                    },
+                ],
+                temperature=0.3,  # Slightly creative but mostly factual
+            )
+
+            summary_text = response.choices[0].message.content
+
+            if not summary_text:
+                logger.error("Summary generation returned empty content")
+                return {
+                    "transcription_file": str(transcription_file),
+                    "status": "error",
+                    "error": "Empty summary returned",
+                }
+
+        except Exception as e:
+            logger.error(f"Failed to generate summary: {e}")
+            return {
+                "transcription_file": str(transcription_file),
+                "status": "error",
+                "error": f"Summary generation failed: {e}",
+            }
+
+        # Save summary to file
+        summary_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            summary_file.write_text(summary_text, encoding="utf-8")
+            logger.info(f"Saved summary: {summary_file.name}")
+            logger.info(f"Summary length: {len(summary_text)} characters")
+        except Exception as e:
+            logger.error(f"Failed to save summary: {e}")
+            return {
+                "transcription_file": str(transcription_file),
+                "status": "error",
+                "error": f"Failed to save summary: {e}",
+            }
+
+        return {
+            "transcription_file": str(transcription_file),
+            "status": "success",
+            "summary_file": str(summary_file),
+            "summary_model": summary_model,
+            "original_length": len(transcription_text),
+            "summary_length": len(summary_text),
+        }

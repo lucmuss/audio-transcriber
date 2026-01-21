@@ -33,6 +33,11 @@ DEFAULT_MODEL = "whisper-1"
 DEFAULT_BASE_URL = "https://api.openai.com/v1"
 DEFAULT_RESPONSE_FORMAT = "text"
 
+# Summarization defaults
+DEFAULT_SUMMARY_MODEL = "gpt-4o-mini"
+DEFAULT_SUMMARY_PROMPT = """Bitte erstelle eine prägnante Zusammenfassung des folgenden Transkripts. 
+Fokussiere dich auf die wichtigsten Punkte, Themen und Erkenntnisse."""
+
 # Pricing (per minute, in USD)
 WHISPER_PRICE_PER_MINUTE = 0.0001
 

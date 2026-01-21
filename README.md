@@ -67,7 +67,7 @@ git clone https://github.com/lucmuss/audio-transcriber.git
 cd audio-transcriber
 
 # Create virtual environment (recommended)
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install package
@@ -296,7 +296,7 @@ audio-transcriber \
 # Clone and install
 git clone https://github.com/lucmuss/audio-transcriber.git
 cd audio-transcriber
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 pip install -e ".[dev]"
 

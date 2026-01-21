@@ -230,7 +230,7 @@ twine upload --repository testpypi dist/*
 
 ```bash
 # Create test environment
-python -m venv test-env
+python3 -m venv test-env
 source test-env/bin/activate
 
 # Install from TestPyPI
@@ -376,7 +376,7 @@ tar -tzf dist/audio-transcriber-1.0.0.tar.gz
 
 ```bash
 # Create clean environment
-python -m venv test-venv
+python3 -m venv test-venv
 source test-venv/bin/activate
 
 # Install locally
