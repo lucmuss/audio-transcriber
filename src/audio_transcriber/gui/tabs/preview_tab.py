@@ -205,9 +205,9 @@ def display_file_metadata(gui_instance, file_path: Path):
         lines.append("=== Audio-Informationen ===")
         lines.append(f"⏱ Dauer: {format_duration(len(audio) / 1000.0)}")
         channel_desc = (
-            'Stereo' if audio.channels == 2
-            else 'Mono' if audio.channels == 1
-            else f'{audio.channels} Kanäle'
+            "Stereo"
+            if audio.channels == 2
+            else "Mono" if audio.channels == 1 else f"{audio.channels} Kanäle"
         )
         lines.append(f"🔊 Kanäle: {audio.channels} ({channel_desc})")
         lines.append(f"📊 Sample-Rate: {audio.frame_rate} Hz")
