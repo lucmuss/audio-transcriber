@@ -95,8 +95,8 @@ class TranscriptionExporter:
         """
         try:
             from docx import Document
-            from docx.shared import Pt, RGBColor
             from docx.enum.text import WD_ALIGN_PARAGRAPH
+            from docx.shared import Pt, RGBColor
         except ImportError:
             logger.error("python-docx not installed. Run: pip install python-docx")
             return {

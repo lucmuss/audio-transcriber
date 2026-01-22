@@ -3,8 +3,8 @@ Main tab for input/output and behavior settings.
 """
 
 import tkinter as tk
-from tkinter import filedialog, ttk
 from pathlib import Path
+from tkinter import filedialog, ttk
 
 from ...constants import VALID_RESPONSE_FORMATS
 
