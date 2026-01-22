@@ -23,21 +23,21 @@ def get_platform_name():
 
 def build_binary():
     """Build the binary using PyInstaller."""
-    print("🔨 Building audio-transcriber binary...")
+    print("[BUILD] Building audio-transcriber binary...")
     print(f"Platform: {platform.system()} {platform.machine()}")
     
     # Ensure PyInstaller is installed
     try:
         import PyInstaller
-        print(f"✓ PyInstaller {PyInstaller.__version__} found")
+        print(f"[OK] PyInstaller {PyInstaller.__version__} found")
     except ImportError:
-        print("❌ PyInstaller not found. Installing...")
+        print("[INFO] PyInstaller not found. Installing...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
     
     # Get version from package
     import audio_transcriber
     version = audio_transcriber.__version__
-    print(f"📦 Version: {version}")
+    print(f"[INFO] Version: {version}")
     
     # PyInstaller options
     name = "audio-transcriber"
@@ -65,14 +65,14 @@ def build_binary():
     # Remove empty strings
     options = [opt for opt in options if opt]
     
-    print(f"🚀 Running PyInstaller with options:")
+    print("[BUILD] Running PyInstaller with options:")
     for opt in options:
         print(f"   {opt}")
     
     # Run PyInstaller
     try:
         subprocess.check_call(["pyinstaller"] + options)
-        print("\n✅ Build successful!")
+        print("\n[SUCCESS] Build successful!")
         
         # Show binary location
         binary_path = Path("dist") / name
@@ -81,27 +81,27 @@ def build_binary():
         
         if binary_path.exists():
             size_mb = binary_path.stat().st_size / (1024 * 1024)
-            print(f"\n📍 Binary location: {binary_path}")
-            print(f"📊 Binary size: {size_mb:.2f} MB")
-            print(f"\n🎉 You can now distribute: {binary_path.absolute()}")
+            print(f"\n[INFO] Binary location: {binary_path}")
+            print(f"[INFO] Binary size: {size_mb:.2f} MB")
+            print(f"\n[SUCCESS] You can now distribute: {binary_path.absolute()}")
             
             # Test binary
-            print("\n🧪 Testing binary...")
+            print("\n[TEST] Testing binary...")
             result = subprocess.run(
                 [str(binary_path.absolute()), "--version"],
                 capture_output=True,
                 text=True
             )
             if result.returncode == 0:
-                print(f"✓ Binary test passed: {result.stdout.strip()}")
+                print(f"[OK] Binary test passed: {result.stdout.strip()}")
             else:
-                print(f"⚠ Binary test failed: {result.stderr}")
+                print(f"[WARNING] Binary test failed: {result.stderr}")
         else:
-            print(f"❌ Binary not found at: {binary_path}")
+            print(f"[ERROR] Binary not found at: {binary_path}")
             return 1
             
     except subprocess.CalledProcessError as e:
-        print(f"\n❌ Build failed: {e}")
+        print(f"\n[ERROR] Build failed: {e}")
         return 1
     
     return 0
