@@ -366,7 +366,10 @@ class AudioTranscriberGUI:
                                     self.log_message("⊘ Summary übersprungen: bereits vorhanden")
                                 else:
                                     self.log_message(
-                                        f"⚠️ Summary-Fehler: {summary_result.get('error', 'Unbekannt')}"
+                                        (
+                                            "⚠️ Summary-Fehler: "
+                                            f"{summary_result.get('error', 'Unbekannt')}"
+                                        )
                                     )
                             except Exception as e:
                                 self.log_message(f"⚠️ Summary-Ausnahme: {e}")
@@ -479,7 +482,10 @@ class AudioTranscriberGUI:
             if failed == 0 and successful > 0:
                 messagebox.showinfo(
                     "Fertig",
-                    f"Transkription abgeschlossen!\n{successful} Datei(en) erfolgreich verarbeitet.",
+                    (
+                        f"Transkription abgeschlossen!\n"
+                        f"{successful} Datei(en) erfolgreich verarbeitet."
+                    ),
                 )
             elif failed > 0:
                 messagebox.showwarning(

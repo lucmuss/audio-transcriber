@@ -362,11 +362,16 @@ class AudioTranscriber:
                             # Save individual segment transcription if output_dir is provided
                             if output_dir:
                                 segment_num = index + 1
-                                segment_filename = (
-                                    f"{file_stem}_{file_ext}_segment_{segment_num:03d}.{response_format}"
-                                    if file_ext
-                                    else f"{file_stem}_segment_{segment_num:03d}.{response_format}"
-                                )
+                                if file_ext:
+                                    segment_filename = (
+                                        f"{file_stem}_{file_ext}_segment_"
+                                        f"{segment_num:03d}.{response_format}"
+                                    )
+                                else:
+                                    segment_filename = (
+                                        f"{file_stem}_segment_{segment_num:03d}."
+                                        f"{response_format}"
+                                    )
                                 segment_output_file = output_dir / segment_filename
 
                                 try:

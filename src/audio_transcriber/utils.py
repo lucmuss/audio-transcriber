@@ -4,7 +4,7 @@ Utility functions for Audio Transcriber.
 
 import logging
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Union
 
 from .constants import SUPPORTED_FORMATS
 

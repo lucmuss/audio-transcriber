@@ -12,8 +12,6 @@ from . import __version__
 from .constants import (
     DEFAULT_BASE_URL,
     DEFAULT_CONCURRENCY,
-    DEFAULT_DIARIZATION_FORMAT,
-    DEFAULT_DIARIZATION_MODEL,
     DEFAULT_MODEL,
     DEFAULT_OVERLAP,
     DEFAULT_RESPONSE_FORMAT,
@@ -214,7 +212,10 @@ For more information: https://github.com/lucmuss/audio-transcriber
         type=str,
         nargs="+",
         default=None,
-        help="Paths to reference audio files for known speakers (e.g., --known-speaker-references alice.wav bob.wav)",
+        help=(
+            "Paths to reference audio files for known speakers "
+            "(e.g., --known-speaker-references alice.wav bob.wav)"
+        ),
     )
 
     # Summarization parameters
@@ -282,7 +283,10 @@ For more information: https://github.com/lucmuss/audio-transcriber
     behavior_group.add_argument(
         "--skip-existing",
         action="store_true",
-        help="Skip files if transcription output already exists (by default files are re-processed)",
+        help=(
+            "Skip files if transcription output already exists "
+            "(by default files are re-processed)"
+        ),
     )
     behavior_group.add_argument(
         "--analyze-duration",

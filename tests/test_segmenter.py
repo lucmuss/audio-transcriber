@@ -2,11 +2,10 @@
 Tests for audio segmentation module.
 """
 
-from pathlib import Path
+
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
-from pydub import AudioSegment
 
 from audio_transcriber.constants import DEFAULT_BITRATE, DEFAULT_CHANNELS, DEFAULT_SAMPLE_RATE
 from audio_transcriber.segmenter import AudioSegmenter

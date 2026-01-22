@@ -3,19 +3,12 @@ Tests for audio transcription orchestrator.
 """
 
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from openai import APIError
 
-from audio_transcriber.constants import (
-    DEFAULT_CONCURRENCY,
-    DEFAULT_MODEL,
-    DEFAULT_OVERLAP,
-    DEFAULT_RESPONSE_FORMAT,
-    DEFAULT_SEGMENT_LENGTH,
-    DEFAULT_TEMPERATURE,
-)
+from audio_transcriber.constants import DEFAULT_MODEL
 from audio_transcriber.transcriber import AudioTranscriber
 
 

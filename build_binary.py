@@ -43,12 +43,14 @@ def build_binary():
     name = "audio-transcriber"
     
     options = [
-        "src/audio_transcriber/cli.py",  # Entry point
+        "src/audio_transcriber/__main__.py",  # Entry point
         f"--name={name}",
         "--onefile",  # Single executable
         "--console",  # Console application
         "--clean",  # Clean PyInstaller cache
         # Add hidden imports if needed
+        "--hidden-import=audio_transcriber",
+        "--hidden-import=audio_transcriber.cli",
         "--hidden-import=pydub",
         "--hidden-import=openai",
         "--hidden-import=tqdm",

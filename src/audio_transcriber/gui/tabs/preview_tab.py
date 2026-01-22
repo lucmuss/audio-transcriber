@@ -204,9 +204,12 @@ def display_file_metadata(gui_instance, file_path: Path):
         lines.append("")
         lines.append("=== Audio-Informationen ===")
         lines.append(f"⏱ Dauer: {format_duration(len(audio) / 1000.0)}")
-        lines.append(
-            f"🔊 Kanäle: {audio.channels} ({'Stereo' if audio.channels == 2 else 'Mono' if audio.channels == 1 else f'{audio.channels} Kanäle'})"
+        channel_desc = (
+            'Stereo' if audio.channels == 2
+            else 'Mono' if audio.channels == 1
+            else f'{audio.channels} Kanäle'
         )
+        lines.append(f"🔊 Kanäle: {audio.channels} ({channel_desc})")
         lines.append(f"📊 Sample-Rate: {audio.frame_rate} Hz")
         lines.append(f"🎚 Sample-Width: {audio.sample_width * 8} bit")
         lines.append(f"💾 Dateigröße: {file_path.stat().st_size / (1024*1024):.2f} MB")
@@ -235,7 +238,10 @@ def display_file_metadata(gui_instance, file_path: Path):
         lines.append("=== Transkriptions-Schätzung ===")
         lines.append(f"💰 Geschätzte Kosten: ${cost:.4f}")
         lines.append(
-            f"⏱ Geschätzte Dauer: ca. {duration_minutes / 10:.1f} - {duration_minutes / 5:.1f} Minuten"
+            (
+                f"⏱ Geschätzte Dauer: ca. {duration_minutes / 10:.1f} - "
+                f"{duration_minutes / 5:.1f} Minuten"
+            )
         )
         lines.append("   (abhängig von Concurrency und Netzwerk)")
 

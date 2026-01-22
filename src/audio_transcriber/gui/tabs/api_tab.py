@@ -5,8 +5,6 @@ API configuration tab.
 import tkinter as tk
 from tkinter import ttk
 
-from ...constants import DEFAULT_BASE_URL
-
 
 def create_api_tab(parent: ttk.Frame, gui_instance):
     """Create API configuration tab."""

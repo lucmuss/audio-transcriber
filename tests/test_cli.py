@@ -2,18 +2,15 @@
 Tests for command-line interface.
 """
 
-import sys
+
 from io import StringIO
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from audio_transcriber.cli import create_parser, main, print_summary, validate_args
 from audio_transcriber.constants import (
-    DEFAULT_BASE_URL,
     DEFAULT_CONCURRENCY,
-    DEFAULT_MODEL,
     DEFAULT_OVERLAP,
     DEFAULT_RESPONSE_FORMAT,
     DEFAULT_SEGMENT_LENGTH,
