@@ -58,17 +58,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
-  
-  publish-to-testpypi:
-    name: Publish to TestPyPI
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/p/audio-transcriber
-    permissions:
-      id-token: write
     
     steps:
       - name: Download artifacts
