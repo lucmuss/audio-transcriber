@@ -39,7 +39,7 @@ DEFAULT_DIARIZATION_FORMAT = "diarized_json"
 
 # Summarization defaults
 DEFAULT_SUMMARY_MODEL = "gpt-4.1-mini"
-DEFAULT_SUMMARY_PROMPT = """Bitte erstelle eine prägnante Zusammenfassung des folgenden Transkripts. 
+DEFAULT_SUMMARY_PROMPT = """Bitte erstelle eine ausführliche Zusammenfassung des folgenden Transkripts. 
 Fokussiere dich auf die wichtigsten Punkte, Themen und Erkenntnisse."""
 
 # Pricing (per minute, in USD) - Model-specific rates
