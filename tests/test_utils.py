@@ -2,7 +2,6 @@
 Tests for utility functions.
 """
 
-
 import pytest
 
 from audio_transcriber.utils import (

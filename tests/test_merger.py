@@ -2,7 +2,6 @@
 Tests for transcription merger.
 """
 
-
 from audio_transcriber.merger import TranscriptionMerger
 
 

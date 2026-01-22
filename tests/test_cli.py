@@ -2,7 +2,6 @@
 Tests for command-line interface.
 """
 
-
 from io import StringIO
 from unittest.mock import MagicMock, patch
 
