@@ -89,13 +89,26 @@ jobs:
         with:
           path: artifacts
       
+      - name: List artifacts (debug)
+        run: |
+          echo "Listing artifact directory structure:"
+          ls -R artifacts/
+      
+      - name: Prepare release binaries
+        run: |
+          mkdir -p release
+          cp artifacts/audio-transcriber-linux/audio-transcriber release/audio-transcriber-linux
+          cp artifacts/audio-transcriber-windows/audio-transcriber.exe release/audio-transcriber-windows.exe
+          cp artifacts/audio-transcriber-macos/audio-transcriber release/audio-transcriber-macos
+          chmod +x release/audio-transcriber-linux
+          chmod +x release/audio-transcriber-macos
+          echo "Release files prepared:"
+          ls -lh release/
+      
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            artifacts/audio-transcriber-linux/*
-            artifacts/audio-transcriber-windows/*
-            artifacts/audio-transcriber-macos/*
+          files: release/*
           draft: false
           prerelease: false
           generate_release_notes: true
