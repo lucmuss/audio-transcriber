@@ -533,6 +533,7 @@ class TestMain:
         mock_find_files.return_value = [audio_file]
 
         mock_transcriber = MagicMock()
+        mock_transcriber.segmenter.get_audio_duration.return_value = 60.0
         mock_transcriber.transcribe_file.return_value = {
             "file": str(audio_file),
             "status": "success",
@@ -540,6 +541,7 @@ class TestMain:
             "transcribed": 2,
             "failed": 0,
             "duration_seconds": 60.0,
+            "output": str(tmp_path / "test.txt"),
         }
         mock_transcriber_class.return_value = mock_transcriber
 
@@ -564,6 +566,7 @@ class TestMain:
         mock_find_files.return_value = [audio_file]
 
         mock_transcriber = MagicMock()
+        mock_transcriber.segmenter.get_audio_duration.return_value = 60.0
         mock_transcriber.transcribe_file.return_value = {
             "file": str(audio_file),
             "status": "error",
@@ -592,11 +595,13 @@ class TestMain:
         mock_find_files.return_value = audio_files
 
         mock_transcriber = MagicMock()
+        mock_transcriber.segmenter.get_audio_duration.return_value = 30.0
         mock_transcriber.transcribe_file.return_value = {
             "status": "success",
             "segments": 1,
             "failed": 0,
             "duration_seconds": 30.0,
+            "output": str(tmp_path / "test.txt"),
         }
         mock_transcriber_class.return_value = mock_transcriber
 
@@ -621,11 +626,13 @@ class TestMain:
         mock_find_files.return_value = [audio_file]
 
         mock_transcriber = MagicMock()
+        mock_transcriber.segmenter.get_audio_duration.return_value = 30.0
         mock_transcriber.transcribe_file.return_value = {
             "status": "success",
             "segments": 1,
             "failed": 0,
             "duration_seconds": 30.0,
+            "output": str(tmp_path / "test.txt"),
         }
         mock_transcriber_class.return_value = mock_transcriber
 

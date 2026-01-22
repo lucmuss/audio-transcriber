@@ -12,6 +12,8 @@ from . import __version__
 from .constants import (
     DEFAULT_BASE_URL,
     DEFAULT_CONCURRENCY,
+    DEFAULT_DIARIZATION_FORMAT,
+    DEFAULT_DIARIZATION_MODEL,
     DEFAULT_MODEL,
     DEFAULT_OVERLAP,
     DEFAULT_RESPONSE_FORMAT,
@@ -21,8 +23,10 @@ from .constants import (
     DEFAULT_TEMPERATURE,
     ENV_PREFIX,
     VALID_RESPONSE_FORMATS,
-    WHISPER_PRICE_PER_MINUTE,
+    get_model_price_per_minute,
 )
+from .exporter import TranscriptionExporter
+from .progress import ProgressTracker
 from .transcriber import AudioTranscriber
 from .utils import estimate_cost, find_audio_files, format_duration, setup_logging
 
@@ -185,6 +189,34 @@ For more information: https://github.com/lucmuss/audio-transcriber
         help=f"Number of parallel transcriptions (default: {DEFAULT_CONCURRENCY})",
     )
 
+    # Diarization parameters (Speaker Recognition)
+    diarization_group = parser.add_argument_group("diarization parameters (speaker recognition)")
+    diarization_group.add_argument(
+        "--enable-diarization",
+        action="store_true",
+        help="Enable speaker diarization (automatically uses gpt-4o-transcribe-diarize model)",
+    )
+    diarization_group.add_argument(
+        "--num-speakers",
+        type=int,
+        default=None,
+        help="Expected number of speakers (optional, auto-detect if not set)",
+    )
+    diarization_group.add_argument(
+        "--known-speaker-names",
+        type=str,
+        nargs="+",
+        default=None,
+        help="List of known speaker names (e.g., --known-speaker-names Alice Bob)",
+    )
+    diarization_group.add_argument(
+        "--known-speaker-references",
+        type=str,
+        nargs="+",
+        default=None,
+        help="Paths to reference audio files for known speakers (e.g., --known-speaker-references alice.wav bob.wav)",
+    )
+
     # Summarization parameters
     summary_group = parser.add_argument_group("summarization parameters")
     summary_group.add_argument(
@@ -211,18 +243,51 @@ For more information: https://github.com/lucmuss/audio-transcriber
         help="Custom prompt for summary generation",
     )
 
+    # Export parameters
+    export_group = parser.add_argument_group("export parameters")
+    export_group.add_argument(
+        "--export",
+        type=str,
+        nargs="+",
+        choices=["docx", "md", "markdown", "latex", "tex"],
+        help="Export transcriptions to additional formats (e.g., --export docx md latex)",
+    )
+    export_group.add_argument(
+        "--export-dir",
+        type=str,
+        default=os.getenv(f"{ENV_PREFIX}EXPORT_DIR", "./exports"),
+        help="Output directory for exports (default: ./exports)",
+    )
+    export_group.add_argument(
+        "--export-title",
+        type=str,
+        default=None,
+        help="Title for exported documents",
+    )
+    export_group.add_argument(
+        "--export-author",
+        type=str,
+        default=None,
+        help="Author name for exported documents",
+    )
+
     # Behavior options
     behavior_group = parser.add_argument_group("behavior options")
     behavior_group.add_argument(
-        "--keep-segments",
-        action="store_true",
-        help="Keep temporary segment files after processing",
+        "--no-keep-segments",
+        action="store_false",
+        dest="keep_segments",
+        help="Delete temporary segment files after processing (segments are kept by default)",
     )
     behavior_group.add_argument(
-        "--no-skip-existing",
-        action="store_false",
-        dest="skip_existing",
-        help="Re-process files even if output exists",
+        "--skip-existing",
+        action="store_true",
+        help="Skip files if transcription output already exists (by default files are re-processed)",
+    )
+    behavior_group.add_argument(
+        "--analyze-duration",
+        action="store_true",
+        help="Analyze audio duration before processing (slower, provides better ETA)",
     )
     behavior_group.add_argument(
         "--dry-run",
@@ -284,7 +349,7 @@ def validate_args(args: argparse.Namespace) -> None:
         sys.exit(1)
 
 
-def print_summary(results: List[dict], verbose: bool = False) -> None:
+def print_summary(results: List[dict], model: str, verbose: bool = False) -> None:
     """Print summary statistics."""
     successful = sum(1 for r in results if r.get("status") == "success")
     skipped = sum(1 for r in results if r.get("status") == "skipped")
@@ -307,8 +372,9 @@ def print_summary(results: List[dict], verbose: bool = False) -> None:
 
     if total_duration > 0:
         print(f"Total duration:      {format_duration(total_duration)}")
-        cost = estimate_cost(total_duration / 60, WHISPER_PRICE_PER_MINUTE)
-        print(f"Estimated cost:      ${cost:.4f} (OpenAI Whisper)")
+        price_per_minute = get_model_price_per_minute(model)
+        cost = estimate_cost(total_duration / 60, price_per_minute)
+        print(f"Estimated cost:      ${cost:.4f} (Model: {model})")
 
     if verbose and results:
         print("\nDetailed results:")
@@ -369,41 +435,148 @@ def main() -> int:
         model=args.model,
     )
 
+    # Initialize progress tracker with model-specific pricing
+    model_price = get_model_price_per_minute(args.model)
+    progress = ProgressTracker(price_per_minute=model_price)
+    progress.start()
+    progress.set_total_files(len(audio_files))
+
+    # Calculate total duration for better ETA (only if requested)
+    if args.analyze_duration:
+        print("\n📊 Analysiere Audio-Dateien...")
+        total_duration_seconds = 0.0
+        for audio_file in audio_files:
+            try:
+                duration = transcriber.segmenter.get_audio_duration(audio_file)
+                total_duration_seconds += duration
+            except Exception:
+                pass  # Skip if duration cannot be determined
+
+        if total_duration_seconds > 0:
+            progress.set_total_duration(total_duration_seconds / 60.0)
+            print(f"📁 Gesamtdauer: {format_duration(total_duration_seconds)}")
+            print(f"💰 Geschätzte Kosten: ${progress.stats.total_cost:.4f}\n")
+    else:
+        print("\n💡 Tipp: Nutze --analyze-duration für bessere ETA-Schätzungen\n")
+
     # Process files
     output_dir = Path(args.output_dir)
     results = []
 
-    for audio_file in audio_files:
-        result = transcriber.transcribe_file(
-            file_path=audio_file,
-            output_dir=output_dir,
-            segments_dir=Path(args.segments_dir),
-            segment_length=args.segment_length,
-            overlap=args.overlap,
-            language=args.language,
-            detect_language=args.detect_language,
-            response_format=args.response_format,
-            concurrency=args.concurrency,
-            temperature=args.temperature,
-            prompt=args.prompt,
-            keep_segments=args.keep_segments,
-            skip_existing=args.skip_existing,
-        )
-        results.append(result)
-        
-        # Generate summary if requested and transcription was successful
-        if args.summarize and result.get("status") == "success":
-            summary_result = transcriber.summarize_transcription(
-                transcription_file=Path(result["output"]),
-                summary_dir=Path(args.summary_dir),
-                summary_model=args.summary_model,
-                summary_prompt=args.summary_prompt,
+    from tqdm import tqdm
+
+    with tqdm(
+        total=len(audio_files),
+        desc="🎵 Dateien",
+        unit="file",
+        bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+    ) as file_pbar:
+        for audio_file in audio_files:
+            # Update progress bar description with current file
+            file_pbar.set_description(f"🎵 {audio_file.name[:30]}")
+
+            result = transcriber.transcribe_file(
+                file_path=audio_file,
+                output_dir=output_dir,
+                segments_dir=Path(args.segments_dir),
+                segment_length=args.segment_length,
+                overlap=args.overlap,
+                language=args.language,
+                detect_language=args.detect_language,
+                response_format=args.response_format,
+                concurrency=args.concurrency,
+                temperature=args.temperature,
+                prompt=args.prompt,
+                keep_segments=args.keep_segments,
                 skip_existing=args.skip_existing,
+                enable_diarization=args.enable_diarization,
+                num_speakers=args.num_speakers,
+                known_speaker_names=args.known_speaker_names,
+                known_speaker_references=args.known_speaker_references,
             )
-            result["summary"] = summary_result
+            results.append(result)
+
+            # Update progress tracker
+            if result.get("status") == "success":
+                duration_min = result.get("duration_seconds", 0) / 60.0
+                num_segments = result.get("segments", 0)
+                progress.update_file_completed(duration_min, num_segments)
+            elif result.get("status") == "error":
+                progress.update_file_failed()
+            elif result.get("status") == "skipped":
+                progress.update_file_skipped()
+
+            # Display live progress stats
+            summary = progress.get_summary()
+            eta_str = summary["time"]["eta_formatted"]
+            throughput_str = summary["throughput"]["formatted"]
+            cost_str = f"${summary['cost']['current']:.4f}"
+
+            file_pbar.set_postfix_str(
+                f"ETA: {eta_str} | {throughput_str} | Kosten: {cost_str}",
+                refresh=True,
+            )
+            file_pbar.update(1)
+
+            # Generate summary if requested and transcription was successful
+            if args.summarize and result.get("status") == "success":
+                summary_result = transcriber.summarize_transcription(
+                    transcription_file=Path(result["output"]),
+                    summary_dir=Path(args.summary_dir),
+                    summary_model=args.summary_model,
+                    summary_prompt=args.summary_prompt,
+                    skip_existing=args.skip_existing,
+                )
+                result["summary"] = summary_result
+
+            # Export to additional formats if requested
+            if args.export and result.get("status") == "success":
+                exporter = TranscriptionExporter()
+                export_dir = Path(args.export_dir)
+                result["exports"] = []
+
+                # Prepare metadata
+                from datetime import datetime
+                metadata = {
+                    "title": args.export_title or audio_file.stem,
+                    "author": args.export_author,
+                    "date": datetime.now().strftime("%Y-%m-%d"),
+                    "duration": format_duration(result.get("duration_seconds", 0)),
+                    "language": result.get("language"),
+                    "model": args.model,
+                }
+
+                for fmt in args.export:
+                    # Determine output filename
+                    file_stem = audio_file.stem
+                    if fmt in ("md", "markdown"):
+                        export_file = export_dir / f"{file_stem}.md"
+                    elif fmt == "docx":
+                        export_file = export_dir / f"{file_stem}.docx"
+                    elif fmt in ("latex", "tex"):
+                        export_file = export_dir / f"{file_stem}.tex"
+                    else:
+                        continue
+
+                    try:
+                        export_result = exporter.export(
+                            transcription_file=Path(result["output"]),
+                            output_file=export_file,
+                            export_format=fmt,
+                            metadata=metadata,
+                        )
+                        result["exports"].append(export_result)
+
+                        if export_result.get("status") == "success":
+                            print(f"  📄 Exportiert: {export_file.name}")
+                    except Exception as e:
+                        print(f"  ⚠️  Export {fmt} fehlgeschlagen: {e}")
+
+    # Print detailed progress summary
+    progress.print_summary()
 
     # Print summary
-    print_summary(results, verbose=args.verbose)
+    print_summary(results, model=args.model, verbose=args.verbose)
 
     # Return exit code
     failed_count = sum(1 for r in results if r.get("status") == "error")

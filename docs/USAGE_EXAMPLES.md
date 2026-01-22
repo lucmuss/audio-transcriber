@@ -8,6 +8,9 @@ Comprehensive guide with 20+ practical examples for audio-transcriber.
 - [Different Providers](#different-providers)
 - [Advanced Segmentation](#advanced-segmentation)
 - [Subtitle Generation](#subtitle-generation)
+- [Speaker Diarization](#speaker-diarization)
+- [AI Summarization](#ai-summarization)
+- [Document Export](#document-export)
 - [Batch Processing](#batch-processing)
 - [Language-Specific](#language-specific)
 - [Integration Examples](#integration-examples)
@@ -195,6 +198,166 @@ audio-transcriber --input video.mp4 --response-format srt --language en -o ./sub
 # French
 audio-transcriber --input video.mp4 --response-format srt --language fr -o ./subs/fr
 ```
+
+---
+
+## Speaker Diarization
+
+### Example 36: Basic Speaker Diarization
+
+```bash
+audio-transcriber \
+  --input meeting.mp3 \
+  --enable-diarization
+```
+
+**Output:** Automatically identifies different speakers and labels them as Speaker 1, Speaker 2, etc.
+
+### Example 37: Diarization with Known Number of Speakers
+
+```bash
+audio-transcriber \
+  --input podcast.mp3 \
+  --enable-diarization \
+  --num-speakers 2
+```
+
+**Use case:** Two-person interview or podcast.
+
+### Example 38: Diarization with Known Speaker Names
+
+```bash
+audio-transcriber \
+  --input panel_discussion.mp3 \
+  --enable-diarization \
+  --known-speaker-names "Alice Johnson" "Bob Smith" "Carol Williams"
+```
+
+**Output:** Speakers are labeled with their actual names instead of Speaker 1, Speaker 2, etc.
+
+### Example 39: Diarization with Reference Audio
+
+```bash
+audio-transcriber \
+  --input conference.mp3 \
+  --enable-diarization \
+  --known-speaker-names "Dr. Sarah Miller" "Prof. John Davis" \
+  --known-speaker-references sarah_voice.wav john_voice.wav
+```
+
+**Use case:** Provide voice samples for more accurate speaker identification.
+
+---
+
+## AI Summarization
+
+### Example 40: Basic Summarization
+
+```bash
+audio-transcriber \
+  --input long_lecture.mp3 \
+  --summarize
+```
+
+**Output:** 
+- `transcriptions/long_lecture_mp3_full.text` (full transcription)
+- `summaries/long_lecture_mp3_summary.txt` (AI-generated summary)
+
+### Example 41: Custom Summary Model
+
+```bash
+audio-transcriber \
+  --input podcast.mp3 \
+  --summarize \
+  --summary-model gpt-4o
+```
+
+**Use case:** Use a more powerful model for better summary quality.
+
+### Example 42: Custom Summary Prompt
+
+```bash
+audio-transcriber \
+  --input meeting.mp3 \
+  --summarize \
+  --summary-prompt "Provide a concise summary with: 1) Key discussion points, 2) Decisions made, 3) Action items with assigned owners"
+```
+
+### Example 43: Combined Diarization and Summarization
+
+```bash
+audio-transcriber \
+  --input team_meeting.mp3 \
+  --enable-diarization \
+  --num-speakers 4 \
+  --summarize \
+  --summary-prompt "Summarize the key points discussed by each speaker"
+```
+
+---
+
+## Document Export
+
+### Example 44: Export to Word Document
+
+```bash
+audio-transcriber \
+  --input interview.mp3 \
+  --export docx
+```
+
+**Output:** `exports/interview.docx` (Microsoft Word format)
+
+### Example 45: Export to Markdown
+
+```bash
+audio-transcriber \
+  --input lecture.mp3 \
+  --export md
+```
+
+**Output:** `exports/lecture.md` (Markdown format for GitHub, documentation, etc.)
+
+### Example 46: Export to LaTeX
+
+```bash
+audio-transcriber \
+  --input research_interview.mp3 \
+  --export latex
+```
+
+**Output:** `exports/research_interview.tex` (for academic papers)
+
+### Example 47: Export to Multiple Formats with Metadata
+
+```bash
+audio-transcriber \
+  --input conference_talk.mp3 \
+  --export docx md latex \
+  --export-title "AI Conference 2026 - Keynote Speech" \
+  --export-author "Dr. Emily Chen" \
+  --export-dir ./publications
+```
+
+**Output:** Creates DOCX, Markdown, and LaTeX files with proper metadata and formatting.
+
+### Example 48: Complete Professional Workflow
+
+```bash
+audio-transcriber \
+  --input board_meeting.mp3 \
+  --enable-diarization \
+  --known-speaker-names "CEO Alice" "CFO Bob" "CTO Carol" \
+  --summarize \
+  --export docx \
+  --export-title "Q1 2026 Board Meeting Minutes" \
+  --export-author "Corporate Secretary"
+```
+
+**Output:**
+- Full diarized transcription
+- AI summary
+- Professional Word document with metadata
 
 ---
 
@@ -418,25 +581,33 @@ audio-transcriber \
   --output-dir ./conference_transcripts
 ```
 
-### Example 34: Podcast Post-Production
+### Example 34: Podcast Post-Production (Enhanced)
 
 ```bash
 #!/bin/bash
-# Complete podcast workflow
+# Complete podcast workflow with new features
 
 EPISODE="episode_42.mp3"
 TITLE="The Future of AI"
 
-# 1. Transcribe for show notes
-audio-transcriber --input "$EPISODE" --response-format text -o "shownotes.txt"
-
-# 2. Generate subtitles for video version
-audio-transcriber --input "$EPISODE" --response-format srt -o "subtitles.srt"
-
-# 3. Generate JSON for searching
-audio-transcriber --input "$EPISODE" --response-format json -o "searchable.json"
+# All-in-one: transcription, diarization, summary, and export
+audio-transcriber \
+  --input "$EPISODE" \
+  --enable-diarization \
+  --num-speakers 2 \
+  --known-speaker-names "Host John" "Guest Dr. Smith" \
+  --summarize \
+  --summary-prompt "Create show notes with: main topics, key insights, and timestamps" \
+  --export docx md \
+  --export-title "$TITLE - Episode 42" \
+  --export-author "TechPod Productions" \
+  --response-format srt
 
 echo "Podcast $TITLE processed successfully!"
+echo "✓ Diarized transcript with speaker labels"
+echo "✓ AI-generated summary for show notes"
+echo "✓ SRT subtitles for video version"
+echo "✓ Word & Markdown documents"
 ```
 
 ### Example 35: Quality Assurance Check
@@ -472,15 +643,32 @@ diff ./qa/openai.txt ./qa/groq.txt
 
 These examples cover:
 - ✅ Basic to advanced usage patterns
-- ✅ Multiple API providers
+- ✅ Multiple API providers (OpenAI, Groq, Ollama, Together.ai, Azure, LocalAI)
+- ✅ Advanced segmentation strategies
+- ✅ Subtitle generation (SRT, VTT)
+- ✅ **Speaker diarization (NEW)** - Identify who said what
+- ✅ **AI summarization (NEW)** - Generate concise summaries
+- ✅ **Document export (NEW)** - DOCX, Markdown, LaTeX formats
 - ✅ Batch processing techniques
-- ✅ Subtitle generation
-- ✅ Language handling
+- ✅ Language handling (40+ languages)
 - ✅ Automation scripts
 - ✅ Integration workflows
 - ✅ Quality assurance
 
+## New Features Quick Reference
+
+| Feature | Command | Output |
+|---------|---------|--------|
+| Speaker Diarization | `--enable-diarization` | Labels who said what |
+| AI Summary | `--summarize` | Concise summary in `./summaries/` |
+| Export to Word | `--export docx` | `.docx` file in `./exports/` |
+| Export to Markdown | `--export md` | `.md` file in `./exports/` |
+| Export to LaTeX | `--export latex` | `.tex` file in `./exports/` |
+| Live Progress | (automatic) | ETA, throughput, cost tracking |
+
 For more help, see:
 - [README.md](../README.md) - Main documentation
+- [QUICKSTART.md](../QUICKSTART.md) - Quick start guide
+- [GUI_GUIDE.md](../GUI_GUIDE.md) - GUI usage instructions
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Common issues
 - [GitHub Issues](https://github.com/lucmuss/audio-transcriber/issues) - Report problems

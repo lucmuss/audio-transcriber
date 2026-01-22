@@ -2,8 +2,14 @@
 openai>=1.30.0
 pydub>=0.25.1
 tqdm>=4.66.1
+python-docx>=1.1.0
 
 # Note: FFmpeg must be installed separately on your system
 # Ubuntu/Debian: sudo apt-get install ffmpeg
 # macOS: brew install ffmpeg
 # Windows: choco install ffmpeg or download from https://ffmpeg.org
+
+# Note: For LaTeX to PDF conversion, install a LaTeX distribution:
+# Ubuntu/Debian: sudo apt-get install texlive-latex-base
+# macOS: brew install mactex
+# Windows: Install MiKTeX or TeX Live

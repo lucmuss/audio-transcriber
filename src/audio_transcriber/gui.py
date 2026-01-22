@@ -1,13 +1,16 @@
 """
-Graphical User Interface for Audio Transcriber using Tkinter with i18n support.
+Graphical User Interface for Audio Transcriber using Tkinter (English-only).
 """
 
+import base64
 import os
 import threading
 import tkinter as tk
+import tkinter.simpledialog
+from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, scrolledtext, ttk
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from . import __version__
 from .constants import (
@@ -22,10 +25,11 @@ from .constants import (
     DEFAULT_TEMPERATURE,
     ENV_PREFIX,
     VALID_RESPONSE_FORMATS,
+    get_model_price_per_minute,
 )
-from .i18n import I18n, LANGUAGE_NAMES
+from .progress import ProgressTracker
 from .transcriber import AudioTranscriber
-from .utils import find_audio_files, setup_logging
+from .utils import find_audio_files, format_duration, setup_logging
 
 
 class AudioTranscriberGUI:
@@ -34,15 +38,11 @@ class AudioTranscriberGUI:
     def __init__(self, root: tk.Tk):
         """Initialize the GUI."""
         self.root = root
-        self.root.geometry("900x900")
+        self.root.geometry("1100x950")
         self.root.resizable(True, True)
 
-        # Initialize i18n (detect system language or default to English)
-        self.i18n = I18n("de")  # Default to German for this user
-        self.current_language = tk.StringVar(value="de")
-
-        # Set window title with i18n
-        self.root.title(f"{self.i18n.get('window_title')} v{__version__}")
+        # Set window title (English only)
+        self.root.title(f"Audio Transcriber v{__version__}")
 
         # Variables
         self.input_path = tk.StringVar()
@@ -73,27 +73,33 @@ class AudioTranscriberGUI:
         self.skip_existing = tk.BooleanVar(value=True)
         self.verbose = tk.BooleanVar(value=False)
 
+        # Diarization (Speaker Recognition)
+        self.enable_diarization = tk.BooleanVar(value=False)
+        self.num_speakers = tk.IntVar(value=2)
+        self.known_speaker_names: List[str] = []
+        self.known_speaker_references: List[str] = []
+
         # Summarization
         self.summarize = tk.BooleanVar(value=False)
         self.summary_dir = tk.StringVar(value="./summaries")
         self.summary_model = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL))
         self.summary_prompt = tk.StringVar(value=DEFAULT_SUMMARY_PROMPT)
 
+        # Export
+        self.export_formats: List[str] = []  # List of selected formats
+        self.export_dir = tk.StringVar(value="./exports")
+        self.export_title = tk.StringVar(value="")
+        self.export_author = tk.StringVar(value="")
+
         # Processing state
         self.is_processing = False
         self.current_thread: Optional[threading.Thread] = None
-
-        # Store widget references for i18n updates
-        self.widgets_to_translate: dict = {}
 
         # Build UI
         self.create_widgets()
 
         # Apply theme
         self.apply_theme()
-
-        # Initial text update
-        self._update_texts()
 
     def apply_theme(self):
         """Apply modern theme to the GUI."""
@@ -115,56 +121,44 @@ class AudioTranscriberGUI:
 
     def create_widgets(self):
         """Create all GUI widgets."""
-        # Language selector at top
-        lang_frame = ttk.Frame(self.root)
-        lang_frame.pack(fill=tk.X, padx=10, pady=(10, 0))
-
-        lang_label = ttk.Label(lang_frame, text=self.i18n.get("language_selector"))
-        lang_label.pack(side=tk.LEFT, padx=(0, 5))
-        self.widgets_to_translate["lang_label"] = ("language_selector", lang_label)
-
-        lang_combo = ttk.Combobox(
-            lang_frame,
-            textvariable=self.current_language,
-            values=list(LANGUAGE_NAMES.keys()),
-            state="readonly",
-            width=15,
-        )
-        lang_combo.pack(side=tk.LEFT)
-        lang_combo.bind("<<ComboboxSelected>>", self._change_language)
-
-        # Display language names
-        def format_lang(code):
-            return f"{code} - {LANGUAGE_NAMES.get(code, code)}"
-
         # Create notebook for tabs
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Tab 1: Main Settings
+        # Tab 1: Main Settings (Input/Output)
         self.main_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.main_frame, text=self.i18n.get("tab_main"))
+        self.notebook.add(self.main_frame, text="📁 Input/Output")
         self.create_main_tab(self.main_frame)
 
         # Tab 2: API Configuration
         self.api_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.api_frame, text=self.i18n.get("tab_api"))
+        self.notebook.add(self.api_frame, text="🔌 API Config")
         self.create_api_tab(self.api_frame)
 
-        # Tab 3: Advanced Settings
-        self.advanced_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.advanced_frame, text=self.i18n.get("tab_advanced"))
-        self.create_advanced_tab(self.advanced_frame)
-
-        # Tab 4: Transcription Settings
+        # Tab 3: Transcription Settings
         self.trans_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.trans_frame, text=self.i18n.get("tab_transcription"))
+        self.notebook.add(self.trans_frame, text="🎙️ Transcription")
         self.create_transcription_tab(self.trans_frame)
 
-        # Tab 5: Summarization Settings
+        # Tab 4: Diarization (Speaker Recognition)
+        self.diarization_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.diarization_frame, text="👥 Speakers")
+        self.create_diarization_tab(self.diarization_frame)
+
+        # Tab 5: Export Settings
+        self.export_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.export_frame, text="📄 Export")
+        self.create_export_tab(self.export_frame)
+
+        # Tab 6: Summarization
         self.summary_frame = ttk.Frame(self.notebook)
-        self.notebook.add(self.summary_frame, text="Zusammenfassung")
+        self.notebook.add(self.summary_frame, text="📝 Summary")
         self.create_summarization_tab(self.summary_frame)
+
+        # Tab 7: File Preview
+        self.preview_frame = ttk.Frame(self.notebook)
+        self.notebook.add(self.preview_frame, text="📊 Preview")
+        self.create_preview_tab(self.preview_frame)
 
         # Bottom: Progress and Control
         self.create_bottom_section()
@@ -172,64 +166,56 @@ class AudioTranscriberGUI:
     def create_main_tab(self, parent: ttk.Frame):
         """Create main settings tab."""
         # Input Section
-        self.input_frame = ttk.LabelFrame(parent, text=self.i18n.get("input"), padding=10)
+        self.input_frame = ttk.LabelFrame(parent, text="Input", padding=10)
         self.input_frame.pack(fill=tk.X, padx=10, pady=10)
 
-        label1 = ttk.Label(self.input_frame, text=self.i18n.get("audio_file_or_folder"))
+        label1 = ttk.Label(self.input_frame, text="Audio File or Folder:")
         label1.grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["audio_label"] = ("audio_file_or_folder", label1)
 
         ttk.Entry(self.input_frame, textvariable=self.input_path, width=50).grid(
             row=0, column=1, padx=5, pady=5
         )
 
         self.choose_file_btn = ttk.Button(
-            self.input_frame, text=self.i18n.get("choose_file"), command=self.browse_file
+            self.input_frame, text="Choose File", command=self.browse_file
         )
         self.choose_file_btn.grid(row=0, column=2, padx=2)
-        self.widgets_to_translate["choose_file_btn"] = ("choose_file", self.choose_file_btn)
 
         self.choose_folder_btn = ttk.Button(
-            self.input_frame, text=self.i18n.get("choose_folder"), command=self.browse_directory
+            self.input_frame, text="Choose Folder", command=self.browse_directory
         )
         self.choose_folder_btn.grid(row=0, column=3, padx=2)
-        self.widgets_to_translate["choose_folder_btn"] = ("choose_folder", self.choose_folder_btn)
 
         # Output Section
-        self.output_frame = ttk.LabelFrame(parent, text=self.i18n.get("output"), padding=10)
+        self.output_frame = ttk.LabelFrame(parent, text="Output", padding=10)
         self.output_frame.pack(fill=tk.X, padx=10, pady=10)
 
-        label2 = ttk.Label(self.output_frame, text=self.i18n.get("transcription_folder"))
+        label2 = ttk.Label(self.output_frame, text="Transcription Folder:")
         label2.grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["trans_folder_label"] = ("transcription_folder", label2)
 
         ttk.Entry(self.output_frame, textvariable=self.output_dir, width=50).grid(
             row=0, column=1, padx=5, pady=5
         )
 
         self.browse_output_btn = ttk.Button(
-            self.output_frame, text=self.i18n.get("browse"), command=self.browse_output
+            self.output_frame, text="Browse", command=self.browse_output
         )
         self.browse_output_btn.grid(row=0, column=2, padx=2)
-        self.widgets_to_translate["browse_output_btn"] = ("browse", self.browse_output_btn)
 
-        label3 = ttk.Label(self.output_frame, text=self.i18n.get("segment_folder"))
+        label3 = ttk.Label(self.output_frame, text="Segments Folder:")
         label3.grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["segment_folder_label"] = ("segment_folder", label3)
 
         ttk.Entry(self.output_frame, textvariable=self.segments_dir, width=50).grid(
             row=1, column=1, padx=5, pady=5
         )
 
         self.browse_segments_btn = ttk.Button(
-            self.output_frame, text=self.i18n.get("browse"), command=self.browse_segments
+            self.output_frame, text="Browse", command=self.browse_segments
         )
         self.browse_segments_btn.grid(row=1, column=2, padx=2)
-        self.widgets_to_translate["browse_segments_btn"] = ("browse", self.browse_segments_btn)
 
-        label4 = ttk.Label(self.output_frame, text=self.i18n.get("output_format"))
+        label4 = ttk.Label(self.output_frame, text="Output Format:")
         label4.grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["format_label"] = ("output_format", label4)
 
         format_combo = ttk.Combobox(
             self.output_frame,
@@ -241,71 +227,62 @@ class AudioTranscriberGUI:
         format_combo.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
 
         # Behavior Options
-        self.behavior_frame = ttk.LabelFrame(parent, text=self.i18n.get("behavior"), padding=10)
+        self.behavior_frame = ttk.LabelFrame(parent, text="Behavior", padding=10)
         self.behavior_frame.pack(fill=tk.X, padx=10, pady=10)
 
         self.keep_seg_check = ttk.Checkbutton(
-            self.behavior_frame, text=self.i18n.get("keep_segments"), variable=self.keep_segments
+            self.behavior_frame, text="Keep segment files", variable=self.keep_segments
         )
         self.keep_seg_check.grid(row=0, column=0, sticky=tk.W, pady=2)
-        self.widgets_to_translate["keep_seg_check"] = ("keep_segments", self.keep_seg_check)
 
         self.skip_exist_check = ttk.Checkbutton(
             self.behavior_frame,
-            text=self.i18n.get("skip_existing"),
+            text="Skip existing files",
             variable=self.skip_existing,
         )
         self.skip_exist_check.grid(row=1, column=0, sticky=tk.W, pady=2)
-        self.widgets_to_translate["skip_exist_check"] = ("skip_existing", self.skip_exist_check)
 
         self.verbose_check = ttk.Checkbutton(
-            self.behavior_frame, text=self.i18n.get("verbose_logging"), variable=self.verbose
+            self.behavior_frame, text="Verbose logging", variable=self.verbose
         )
         self.verbose_check.grid(row=2, column=0, sticky=tk.W, pady=2)
-        self.widgets_to_translate["verbose_check"] = ("verbose_logging", self.verbose_check)
 
     def create_api_tab(self, parent: ttk.Frame):
         """Create API configuration tab."""
-        self.api_settings_frame = ttk.LabelFrame(parent, text=self.i18n.get("api_settings"), padding=10)
+        self.api_settings_frame = ttk.LabelFrame(parent, text="API Settings", padding=10)
         self.api_settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        self.widgets_to_translate["api_settings_frame"] = ("api_settings", self.api_settings_frame)
 
         # API Key
-        api_key_label = ttk.Label(self.api_settings_frame, text=self.i18n.get("api_key_label"))
+        api_key_label = ttk.Label(self.api_settings_frame, text="API Key:")
         api_key_label.grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["api_key_label"] = ("api_key_label", api_key_label)
         
         api_entry = ttk.Entry(self.api_settings_frame, textvariable=self.api_key, width=50, show="*")
         api_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
 
         self.show_password_btn = ttk.Button(
-            self.api_settings_frame, text=self.i18n.get("show_password"), command=lambda: self.toggle_password(api_entry)
+            self.api_settings_frame, text="Show", command=lambda: self.toggle_password(api_entry)
         )
         self.show_password_btn.grid(row=0, column=2, padx=2)
-        self.widgets_to_translate["show_password_btn"] = ("show_password", self.show_password_btn)
 
         # Base URL
-        base_url_label = ttk.Label(self.api_settings_frame, text=self.i18n.get("base_url_label"))
+        base_url_label = ttk.Label(self.api_settings_frame, text="Base URL:")
         base_url_label.grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["base_url_label"] = ("base_url_label", base_url_label)
         
         ttk.Entry(self.api_settings_frame, textvariable=self.base_url, width=50).grid(
             row=1, column=1, padx=5, pady=5, sticky=tk.W
         )
 
         # Model
-        model_label = ttk.Label(self.api_settings_frame, text=self.i18n.get("model_label"))
+        model_label = ttk.Label(self.api_settings_frame, text="Model:")
         model_label.grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["model_label"] = ("model_label", model_label)
         
         ttk.Entry(self.api_settings_frame, textvariable=self.model, width=50).grid(
             row=2, column=1, padx=5, pady=5, sticky=tk.W
         )
 
         # Info Frame
-        self.provider_examples_frame = ttk.LabelFrame(parent, text=self.i18n.get("provider_examples"), padding=10)
+        self.provider_examples_frame = ttk.LabelFrame(parent, text="Provider Examples", padding=10)
         self.provider_examples_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        self.widgets_to_translate["provider_examples_frame"] = ("provider_examples", self.provider_examples_frame)
 
         info_text = """
 OpenAI:
@@ -334,34 +311,29 @@ Together.ai:
     def create_advanced_tab(self, parent: ttk.Frame):
         """Create advanced settings tab."""
         # Segmentation Frame
-        self.seg_params_frame = ttk.LabelFrame(parent, text=self.i18n.get("segmentation_params"), padding=10)
+        self.seg_params_frame = ttk.LabelFrame(parent, text="Segmentation Parameters", padding=10)
         self.seg_params_frame.pack(fill=tk.X, padx=10, pady=10)
-        self.widgets_to_translate["seg_params_frame"] = ("segmentation_params", self.seg_params_frame)
 
-        seg_length_label = ttk.Label(self.seg_params_frame, text=self.i18n.get("segment_length_label"))
+        seg_length_label = ttk.Label(self.seg_params_frame, text="Segment Length (seconds):")
         seg_length_label.grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["seg_length_label"] = ("segment_length_label", seg_length_label)
         
         ttk.Spinbox(self.seg_params_frame, from_=60, to=1800, textvariable=self.segment_length, width=10).grid(
             row=0, column=1, padx=5, pady=5, sticky=tk.W
         )
 
-        overlap_label = ttk.Label(self.seg_params_frame, text=self.i18n.get("overlap_label"))
+        overlap_label = ttk.Label(self.seg_params_frame, text="Overlap (seconds):")
         overlap_label.grid(row=1, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["overlap_label"] = ("overlap_label", overlap_label)
         
         ttk.Spinbox(self.seg_params_frame, from_=0, to=60, textvariable=self.overlap, width=10).grid(
             row=1, column=1, padx=5, pady=5, sticky=tk.W
         )
 
         # Performance Frame
-        self.perf_frame = ttk.LabelFrame(parent, text=self.i18n.get("performance"), padding=10)
+        self.perf_frame = ttk.LabelFrame(parent, text="Performance", padding=10)
         self.perf_frame.pack(fill=tk.X, padx=10, pady=10)
-        self.widgets_to_translate["perf_frame"] = ("performance", self.perf_frame)
 
-        parallel_label = ttk.Label(self.perf_frame, text=self.i18n.get("parallel_transcriptions_label"))
+        parallel_label = ttk.Label(self.perf_frame, text="Parallel Transcriptions:")
         parallel_label.grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["parallel_label"] = ("parallel_transcriptions_label", parallel_label)
         
         ttk.Spinbox(self.perf_frame, from_=1, to=16, textvariable=self.concurrency, width=10).grid(
             row=0, column=1, padx=5, pady=5, sticky=tk.W
@@ -369,41 +341,35 @@ Together.ai:
 
     def create_transcription_tab(self, parent: ttk.Frame):
         """Create transcription settings tab."""
-        self.trans_settings_frame = ttk.LabelFrame(parent, text=self.i18n.get("transcription_settings"), padding=10)
+        self.trans_settings_frame = ttk.LabelFrame(parent, text="Transcription Settings", padding=10)
         self.trans_settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        self.widgets_to_translate["trans_settings_frame"] = ("transcription_settings", self.trans_settings_frame)
 
         # Language
-        lang_iso_label = ttk.Label(self.trans_settings_frame, text=self.i18n.get("language_iso_label"))
+        lang_iso_label = ttk.Label(self.trans_settings_frame, text="Language (ISO 639-1):")
         lang_iso_label.grid(row=0, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["lang_iso_label"] = ("language_iso_label", lang_iso_label)
         
         lang_entry = ttk.Entry(self.trans_settings_frame, textvariable=self.language, width=10)
         lang_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
         
-        lang_hint_label = ttk.Label(self.trans_settings_frame, text=self.i18n.get("language_hint"), font=("", 9))
+        lang_hint_label = ttk.Label(self.trans_settings_frame, text="(e.g., en, de, fr - leave empty for auto-detect)", font=("", 9))
         lang_hint_label.grid(row=0, column=2, sticky=tk.W, padx=5)
-        self.widgets_to_translate["lang_hint_label"] = ("language_hint", lang_hint_label)
 
         self.auto_detect_check = ttk.Checkbutton(
-            self.trans_settings_frame, text=self.i18n.get("auto_detect_language"), variable=self.detect_language
+            self.trans_settings_frame, text="Auto-detect language", variable=self.detect_language
         )
         self.auto_detect_check.grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=2)
-        self.widgets_to_translate["auto_detect_check"] = ("auto_detect_language", self.auto_detect_check)
 
         # Temperature
-        temp_label = ttk.Label(self.trans_settings_frame, text=self.i18n.get("temperature_label"))
+        temp_label = ttk.Label(self.trans_settings_frame, text="Temperature:")
         temp_label.grid(row=2, column=0, sticky=tk.W, pady=5)
-        self.widgets_to_translate["temp_label"] = ("temperature_label", temp_label)
         
         ttk.Spinbox(
             self.trans_settings_frame, from_=0.0, to=1.0, increment=0.1, textvariable=self.temperature, width=10
         ).grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
 
         # Prompt
-        prompt_label = ttk.Label(self.trans_settings_frame, text=self.i18n.get("context_prompt_label"))
+        prompt_label = ttk.Label(self.trans_settings_frame, text="Context Prompt:")
         prompt_label.grid(row=3, column=0, sticky=tk.NW, pady=5)
-        self.widgets_to_translate["prompt_label"] = ("context_prompt_label", prompt_label)
         
         prompt_text = tk.Text(self.trans_settings_frame, width=50, height=4)
         prompt_text.grid(row=3, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
@@ -417,11 +383,179 @@ Together.ai:
 
         prompt_tip_label = ttk.Label(
             self.trans_settings_frame,
-            text=self.i18n.get("prompt_tip"),
+            text="Provide context like names, technical terms for better accuracy",
             font=("", 9),
         )
         prompt_tip_label.grid(row=4, column=1, columnspan=2, sticky=tk.W, padx=5)
-        self.widgets_to_translate["prompt_tip_label"] = ("prompt_tip", prompt_tip_label)
+
+    def create_diarization_tab(self, parent: ttk.Frame):
+        """Create speaker diarization tab."""
+        # Enable Diarization
+        enable_frame = ttk.Frame(parent)
+        enable_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        ttk.Checkbutton(
+            enable_frame,
+            text="Enable Speaker Diarization (Automatically uses gpt-4o-transcribe-diarize model)",
+            variable=self.enable_diarization
+        ).pack(anchor=tk.W)
+        
+        # Diarization Settings Frame
+        settings_frame = ttk.LabelFrame(parent, text="Diarization Settings", padding=10)
+        settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Number of Speakers
+        ttk.Label(settings_frame, text="Number of Speakers:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Spinbox(settings_frame, from_=1, to=20, textvariable=self.num_speakers, width=10).grid(
+            row=0, column=1, padx=5, pady=5, sticky=tk.W
+        )
+        ttk.Label(settings_frame, text="(Optional: leave for auto-detection)", font=("", 9)).grid(
+            row=0, column=2, sticky=tk.W, padx=5
+        )
+        
+        # Known Speaker Names
+        ttk.Label(settings_frame, text="Known Speaker Names:").grid(row=1, column=0, sticky=tk.NW, pady=5)
+        
+        names_frame = ttk.Frame(settings_frame)
+        names_frame.grid(row=1, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        
+        self.speaker_names_list = tk.Listbox(names_frame, height=4, width=40)
+        self.speaker_names_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        names_scrollbar = ttk.Scrollbar(names_frame, orient=tk.VERTICAL, command=self.speaker_names_list.yview)
+        self.speaker_names_list.configure(yscrollcommand=names_scrollbar.set)
+        names_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        names_btn_frame = ttk.Frame(settings_frame)
+        names_btn_frame.grid(row=2, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        
+        ttk.Button(names_btn_frame, text="Add Name", command=self.add_speaker_name).pack(side=tk.LEFT, padx=2)
+        ttk.Button(names_btn_frame, text="Remove Selected", command=self.remove_speaker_name).pack(side=tk.LEFT, padx=2)
+        
+        # Known Speaker References (Audio Files)
+        ttk.Label(settings_frame, text="Reference Audio Files:").grid(row=3, column=0, sticky=tk.NW, pady=5)
+        
+        refs_frame = ttk.Frame(settings_frame)
+        refs_frame.grid(row=3, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        
+        self.speaker_refs_list = tk.Listbox(refs_frame, height=4, width=40)
+        self.speaker_refs_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        refs_scrollbar = ttk.Scrollbar(refs_frame, orient=tk.VERTICAL, command=self.speaker_refs_list.yview)
+        self.speaker_refs_list.configure(yscrollcommand=refs_scrollbar.set)
+        refs_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        refs_btn_frame = ttk.Frame(settings_frame)
+        refs_btn_frame.grid(row=4, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
+        
+        ttk.Button(refs_btn_frame, text="Add Audio File", command=self.add_speaker_reference).pack(side=tk.LEFT, padx=2)
+        ttk.Button(refs_btn_frame, text="Remove Selected", command=self.remove_speaker_reference).pack(side=tk.LEFT, padx=2)
+        
+        # Info Frame
+        info_frame = ttk.LabelFrame(parent, text="Information", padding=10)
+        info_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        info_text = """Speaker Diarization identifies different speakers in the audio.
+
+Options:
+• Number of Speakers: Expected speaker count (auto-detected if not set)
+• Known Speaker Names: List of speaker names to identify
+• Reference Audio: Audio samples of known speakers for better identification
+
+Note: Diarization requires specific models and may incur additional costs."""
+        
+        ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(anchor=tk.W)
+    
+    def add_speaker_name(self):
+        """Add a speaker name to the list."""
+        name = tk.simpledialog.askstring("Add Speaker", "Enter speaker name:")
+        if name and name.strip():
+            self.speaker_names_list.insert(tk.END, name.strip())
+            self.known_speaker_names.append(name.strip())
+    
+    def remove_speaker_name(self):
+        """Remove selected speaker name."""
+        selection = self.speaker_names_list.curselection()
+        if selection:
+            index = selection[0]
+            self.speaker_names_list.delete(index)
+            if index < len(self.known_speaker_names):
+                self.known_speaker_names.pop(index)
+    
+    def add_speaker_reference(self):
+        """Add a reference audio file."""
+        filename = filedialog.askopenfilename(
+            title="Select Reference Audio",
+            filetypes=[("Audio Files", "*.mp3 *.wav *.m4a *.flac *.ogg"), ("All Files", "*.*")]
+        )
+        if filename:
+            self.speaker_refs_list.insert(tk.END, Path(filename).name)
+            self.known_speaker_references.append(filename)
+    
+    def remove_speaker_reference(self):
+        """Remove selected reference audio."""
+        selection = self.speaker_refs_list.curselection()
+        if selection:
+            index = selection[0]
+            self.speaker_refs_list.delete(index)
+            if index < len(self.known_speaker_references):
+                self.known_speaker_references.pop(index)
+
+    def create_export_tab(self, parent: ttk.Frame):
+        """Create export settings tab."""
+        # Export Formats Frame
+        formats_frame = ttk.LabelFrame(parent, text="Export Formats", padding=10)
+        formats_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        ttk.Label(formats_frame, text="Select additional export formats:").pack(anchor=tk.W, pady=(0, 10))
+        
+        # Checkboxes for each format
+        self.export_docx_var = tk.BooleanVar(value=False)
+        self.export_md_var = tk.BooleanVar(value=False)
+        self.export_latex_var = tk.BooleanVar(value=False)
+        
+        ttk.Checkbutton(formats_frame, text="DOCX (Microsoft Word)", variable=self.export_docx_var).pack(anchor=tk.W, pady=2)
+        ttk.Checkbutton(formats_frame, text="Markdown (.md)", variable=self.export_md_var).pack(anchor=tk.W, pady=2)
+        ttk.Checkbutton(formats_frame, text="LaTeX (.tex)", variable=self.export_latex_var).pack(anchor=tk.W, pady=2)
+        
+        # Export Settings Frame
+        settings_frame = ttk.LabelFrame(parent, text="Export Settings", padding=10)
+        settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Export Directory
+        ttk.Label(settings_frame, text="Export Directory:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(settings_frame, textvariable=self.export_dir, width=50).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(settings_frame, text="Browse", command=self.browse_export_dir).grid(row=0, column=2, padx=2)
+        
+        # Document Title
+        ttk.Label(settings_frame, text="Document Title:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(settings_frame, textvariable=self.export_title, width=50).grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(settings_frame, text="(Optional - uses filename if empty)", font=("", 9)).grid(row=1, column=2, sticky=tk.W, padx=5)
+        
+        # Document Author
+        ttk.Label(settings_frame, text="Author:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(settings_frame, textvariable=self.export_author, width=50).grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+        ttk.Label(settings_frame, text="(Optional)", font=("", 9)).grid(row=2, column=2, sticky=tk.W, padx=5)
+        
+        # Info Frame
+        info_frame = ttk.LabelFrame(parent, text="Information", padding=10)
+        info_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        info_text = """Export transcriptions to additional formats for various use cases:
+
+• DOCX: Microsoft Word documents with metadata and formatting
+• Markdown: Clean, portable text format for documentation
+• LaTeX: Scientific/academic documents with proper formatting
+
+All formats include metadata (title, author, date, duration, etc.)"""
+        
+        ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(anchor=tk.W)
+    
+    def browse_export_dir(self):
+        """Browse for export directory."""
+        directory = filedialog.askdirectory(title="Select Export Directory")
+        if directory:
+            self.export_dir.set(directory)
 
     def create_summarization_tab(self, parent: ttk.Frame):
         """Create summarization settings tab."""
@@ -498,19 +632,273 @@ Länge der Transkription und dem gewählten Modell."""
         
         ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(anchor=tk.W)
 
+    def create_preview_tab(self, parent: ttk.Frame):
+        """Create file preview tab."""
+        # Preview Controls
+        control_frame = ttk.Frame(parent)
+        control_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        ttk.Button(
+            control_frame,
+            text="📂 Dateien analysieren",
+            command=self.analyze_files
+        ).pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(
+            control_frame,
+            text="🔄 Aktualisieren",
+            command=self.refresh_preview
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # File List Frame
+        list_frame = ttk.LabelFrame(parent, text="Gefundene Dateien", padding=10)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Scrollable file list with Treeview
+        columns = ("Datei", "Dauer", "Größe", "Format")
+        self.file_tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=5)
+        
+        # Define headings
+        self.file_tree.heading("Datei", text="Dateiname")
+        self.file_tree.heading("Dauer", text="Dauer")
+        self.file_tree.heading("Größe", text="Größe")
+        self.file_tree.heading("Format", text="Format")
+        
+        # Define column widths
+        self.file_tree.column("Datei", width=300)
+        self.file_tree.column("Dauer", width=100)
+        self.file_tree.column("Größe", width=100)
+        self.file_tree.column("Format", width=80)
+        
+        # Add scrollbar
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.file_tree.yview)
+        self.file_tree.configure(yscrollcommand=scrollbar.set)
+        
+        self.file_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Bind selection event
+        self.file_tree.bind("<<TreeviewSelect>>", self.on_file_select)
+        
+        # Metadata Display Frame
+        metadata_frame = ttk.LabelFrame(parent, text="Datei-Details", padding=10)
+        metadata_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Metadata text area
+        self.metadata_text = scrolledtext.ScrolledText(
+            metadata_frame, height=6, width=80, state=tk.DISABLED, wrap=tk.WORD
+        )
+        self.metadata_text.pack(fill=tk.BOTH, expand=True)
+        
+        # Summary Stats Frame
+        stats_frame = ttk.LabelFrame(parent, text="Zusammenfassung", padding=10)
+        stats_frame.pack(fill=tk.X, padx=10, pady=10)
+        
+        self.stats_label = ttk.Label(
+            stats_frame,
+            text="Keine Dateien geladen. Klicken Sie auf 'Dateien analysieren'.",
+            font=("", 9)
+        )
+        self.stats_label.pack(anchor=tk.W)
+
+    def analyze_files(self):
+        """Analyze audio files and display preview."""
+        input_path = self.input_path.get()
+        
+        if not input_path:
+            messagebox.showwarning("Warnung", "Bitte wählen Sie zuerst eine Datei oder einen Ordner aus.")
+            return
+        
+        if not Path(input_path).exists():
+            messagebox.showerror("Fehler", f"Pfad existiert nicht: {input_path}")
+            return
+        
+        # Clear existing items
+        for item in self.file_tree.get_children():
+            self.file_tree.delete(item)
+        
+        try:
+            # Find audio files
+            audio_files = find_audio_files(input_path)
+            
+            if not audio_files:
+                messagebox.showwarning("Warnung", "Keine Audio-Dateien gefunden!")
+                return
+            
+            # Create a temporary transcriber just for metadata
+            from pydub import AudioSegment
+            
+            total_duration = 0.0
+            total_size = 0
+            
+            for audio_file in audio_files:
+                try:
+                    # Get file size
+                    file_size = audio_file.stat().st_size
+                    total_size += file_size
+                    size_mb = file_size / (1024 * 1024)
+                    
+                    # Get audio duration using pydub
+                    audio = AudioSegment.from_file(str(audio_file))
+                    duration_seconds = len(audio) / 1000.0  # pydub uses milliseconds
+                    total_duration += duration_seconds
+                    
+                    # Format values
+                    duration_str = format_duration(duration_seconds)
+                    size_str = f"{size_mb:.1f} MB"
+                    format_str = audio_file.suffix.upper().replace(".", "")
+                    
+                    # Add to tree
+                    self.file_tree.insert(
+                        "",
+                        tk.END,
+                        values=(audio_file.name, duration_str, size_str, format_str),
+                        tags=(str(audio_file),)  # Store full path in tags
+                    )
+                    
+                except Exception as e:
+                    # If error, still add file but with error info
+                    self.file_tree.insert(
+                        "",
+                        tk.END,
+                        values=(audio_file.name, "Fehler", "--", audio_file.suffix.upper().replace(".", "")),
+                        tags=(str(audio_file),)
+                    )
+            
+            # Update summary stats
+            total_duration_str = format_duration(total_duration)
+            total_size_mb = total_size / (1024 * 1024)
+            model_price = get_model_price_per_minute(self.model.get())
+            estimated_cost = (total_duration / 60.0) * model_price
+            
+            stats_text = (
+                f"📁 Dateien: {len(audio_files)} | "
+                f"⏱ Gesamtdauer: {total_duration_str} | "
+                f"💾 Gesamtgröße: {total_size_mb:.1f} MB | "
+                f"💰 Geschätzte Kosten:  ${estimated_cost:.4f}"
+            )
+            self.stats_label.config(text=stats_text)
+            
+        except Exception as e:
+            messagebox.showerror("Fehler", f"Analyse fehlgeschlagen:\n{e}")
+
+    def on_file_select(self, event):
+        """Handle file selection in tree view."""
+        selection = self.file_tree.selection()
+        if not selection:
+            return
+        
+        # Get selected item
+        item = selection[0]
+        tags = self.file_tree.item(item, "tags")
+        
+        if not tags:
+            return
+        
+        file_path = Path(tags[0])
+        
+        # Display detailed metadata
+        self.display_file_metadata(file_path)
+
+    def display_file_metadata(self, file_path: Path):
+        """Display detailed metadata for selected file."""
+        self.metadata_text.config(state=tk.NORMAL)
+        self.metadata_text.delete("1.0", tk.END)
+        
+        try:
+            from pydub import AudioSegment
+            from pydub.utils import mediainfo
+            
+            # Load audio file
+            audio = AudioSegment.from_file(str(file_path))
+            info = mediainfo(str(file_path))
+            
+            # Format metadata
+            lines = []
+            lines.append(f"📄 Datei: {file_path.name}")
+            lines.append(f"📂 Pfad: {file_path.parent}")
+            lines.append("")
+            lines.append("=== Audio-Informationen ===")
+            lines.append(f"⏱ Dauer: {format_duration(len(audio) / 1000.0)}")
+            lines.append(f"🔊 Kanäle: {audio.channels} ({'Stereo' if audio.channels == 2 else 'Mono' if audio.channels == 1 else f'{audio.channels} Kanäle'})")
+            lines.append(f"📊 Sample-Rate: {audio.frame_rate} Hz")
+            lines.append(f"🎚 Sample-Width: {audio.sample_width * 8} bit")
+            lines.append(f"💾 Dateigröße: {file_path.stat().st_size / (1024*1024):.2f} MB")
+            lines.append(f"📦 Format: {file_path.suffix.upper().replace('.', '')}")
+            
+            if info:
+                lines.append("")
+                lines.append("=== Erweiterte Metadaten ===")
+                
+                if "bit_rate" in info:
+                    bitrate_kbps = int(info["bit_rate"]) / 1000
+                    lines.append(f"📈 Bitrate: {bitrate_kbps:.0f} kbps")
+                
+                if "codec_name" in info:
+                    lines.append(f"🔧 Codec: {info['codec_name']}")
+                
+                if "duration" in info:
+                    lines.append(f"⏱ Präzise Dauer: {float(info['duration']):.2f}s")
+            
+            # Calculate estimated cost
+            duration_minutes = len(audio) / 1000.0 / 60.0
+            model_price = get_model_price_per_minute(self.model.get())
+            cost = duration_minutes * model_price
+            
+            lines.append("")
+            lines.append("=== Transkriptions-Schätzung ===")
+            lines.append(f"💰 Geschätzte Kosten: ${cost:.4f}")
+            lines.append(f"⏱ Geschätzte Dauer: ca. {duration_minutes / 10:.1f} - {duration_minutes / 5:.1f} Minuten")
+            lines.append(f"   (abhängig von Concurrency und Netzwerk)")
+            
+            self.metadata_text.insert("1.0", "\n".join(lines))
+            
+        except Exception as e:
+            self.metadata_text.insert("1.0", f"Fehler beim Laden der Metadaten:\n{e}")
+        
+        self.metadata_text.config(state=tk.DISABLED)
+
+    def refresh_preview(self):
+        """Refresh preview with current input path."""
+        self.analyze_files()
+
     def create_bottom_section(self):
         """Create bottom section with progress and control buttons."""
         bottom_frame = ttk.Frame(self.root)
         bottom_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # Progress Section
-        self.progress_frame = ttk.LabelFrame(bottom_frame, text=self.i18n.get("progress"), padding=10)
+        self.progress_frame = ttk.LabelFrame(bottom_frame, text="Progress", padding=10)
         self.progress_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
-        self.widgets_to_translate["progress_frame"] = ("progress", self.progress_frame)
+
+        # Progress bar with percentage
+        progress_bar_frame = ttk.Frame(self.progress_frame)
+        progress_bar_frame.pack(fill=tk.X, pady=(0, 10))
+
+        self.progress_bar = ttk.Progressbar(
+            progress_bar_frame, orient="horizontal", length=400, mode="determinate"
+        )
+        self.progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+
+        self.progress_label = ttk.Label(progress_bar_frame, text="0%", width=10)
+        self.progress_label.pack(side=tk.LEFT)
+
+        # Stats frame for ETA, throughput, cost
+        stats_frame = ttk.Frame(self.progress_frame)
+        stats_frame.pack(fill=tk.X, pady=(0, 10))
+
+        self.eta_label = ttk.Label(stats_frame, text="ETA: --", font=("", 9))
+        self.eta_label.pack(side=tk.LEFT, padx=(0, 20))
+
+        self.throughput_label = ttk.Label(stats_frame, text="Durchsatz: --", font=("", 9))
+        self.throughput_label.pack(side=tk.LEFT, padx=(0, 20))
+
+        self.cost_label = ttk.Label(stats_frame, text="Kosten: $0.0000", font=("", 9))
+        self.cost_label.pack(side=tk.LEFT)
 
         # Log output
         self.log_text = scrolledtext.ScrolledText(
-            self.progress_frame, height=10, width=80, state=tk.DISABLED, wrap=tk.WORD
+            self.progress_frame, height=5, width=80, state=tk.DISABLED, wrap=tk.WORD
         )
         self.log_text.pack(fill=tk.BOTH, expand=True)
 
@@ -520,26 +908,22 @@ Länge der Transkription und dem gewählten Modell."""
 
         self.start_button = ttk.Button(
             button_frame,
-            text=self.i18n.get("start_transcription_btn"),
+            text="Start Transcription",
             command=self.start_transcription,
             style="Accent.TButton",
         )
         self.start_button.pack(side=tk.LEFT, padx=5)
-        self.widgets_to_translate["start_button"] = ("start_transcription_btn", self.start_button)
 
         self.stop_button = ttk.Button(
-            button_frame, text=self.i18n.get("stop_btn"), command=self.stop_transcription, state=tk.DISABLED
+            button_frame, text="Stop", command=self.stop_transcription, state=tk.DISABLED
         )
         self.stop_button.pack(side=tk.LEFT, padx=5)
-        self.widgets_to_translate["stop_button"] = ("stop_btn", self.stop_button)
 
-        self.clear_log_button = ttk.Button(button_frame, text=self.i18n.get("clear_log_btn"), command=self.clear_log)
+        self.clear_log_button = ttk.Button(button_frame, text="Clear Log", command=self.clear_log)
         self.clear_log_button.pack(side=tk.LEFT, padx=5)
-        self.widgets_to_translate["clear_log_button"] = ("clear_log_btn", self.clear_log_button)
 
-        self.quit_button = ttk.Button(button_frame, text=self.i18n.get("quit_btn"), command=self.root.quit)
+        self.quit_button = ttk.Button(button_frame, text="Quit", command=self.root.quit)
         self.quit_button.pack(side=tk.RIGHT, padx=5)
-        self.widgets_to_translate["quit_button"] = ("quit_btn", self.quit_button)
 
     def browse_file(self):
         """Browse for audio file."""
@@ -636,9 +1020,41 @@ Länge der Transkription und dem gewählten Modell."""
         self.current_thread = threading.Thread(target=self.run_transcription, daemon=True)
         self.current_thread.start()
 
+    def update_progress_ui(self, progress_tracker: ProgressTracker):
+        """Update progress UI elements with current progress."""
+        summary = progress_tracker.get_summary()
+        
+        # Update progress bar and percentage
+        progress_pct = summary["files"]["progress_pct"]
+        self.progress_bar["value"] = progress_pct
+        self.progress_label.config(text=f"{progress_pct:.1f}%")
+        
+        # Update ETA
+        eta_str = summary["time"]["eta_formatted"]
+        self.eta_label.config(text=f"ETA: {eta_str}")
+        
+        # Update throughput
+        throughput_str = summary["throughput"]["formatted"]
+        self.throughput_label.config(text=f"Durchsatz: {throughput_str}")
+        
+        # Update cost
+        current_cost = summary["cost"]["current"]
+        total_cost = summary["cost"]["total_estimated"]
+        self.cost_label.config(text=f"Kosten: ${current_cost:.4f} / ${total_cost:.4f}")
+        
+        # Force UI update
+        self.root.update_idletasks()
+
     def run_transcription(self):
         """Run transcription in background thread."""
         try:
+            # Reset progress UI
+            self.progress_bar["value"] = 0
+            self.progress_label.config(text="0%")
+            self.eta_label.config(text="ETA: --")
+            self.throughput_label.config(text="Durchsatz: --")
+            self.cost_label.config(text="Kosten: $0.0000")
+            
             self.log_message("=" * 70)
             self.log_message("Audio Transcriber gestartet")
             self.log_message("=" * 70)
@@ -664,6 +1080,28 @@ Länge der Transkription und dem gewählten Modell."""
                 base_url=self.base_url.get(),
                 model=self.model.get(),
             )
+
+            # Initialize progress tracker with model-specific pricing
+            model_price = get_model_price_per_minute(self.model.get())
+            progress = ProgressTracker(price_per_minute=model_price)
+            progress.start()
+            progress.set_total_files(len(audio_files))
+
+            # Calculate total duration for better ETA
+            self.log_message("\n📊 Analysiere Audio-Dateien...")
+            total_duration_seconds = 0.0
+            for audio_file in audio_files:
+                try:
+                    duration = transcriber.segmenter.get_audio_duration(audio_file)
+                    total_duration_seconds += duration
+                except Exception:
+                    pass  # Skip if duration cannot be determined
+
+            if total_duration_seconds > 0:
+                progress.set_total_duration(total_duration_seconds / 60.0)
+                self.log_message(f"📁 Gesamtdauer: {format_duration(total_duration_seconds)}")
+                self.log_message(f"💰 Geschätzte Kosten: ${progress.stats.total_cost:.4f}\n")
+                self.update_progress_ui(progress)
 
             # Process files
             output_dir = Path(self.output_dir.get())
@@ -694,10 +1132,18 @@ Länge der Transkription und dem gewählten Modell."""
                         prompt=self.prompt.get() or None,
                         keep_segments=self.keep_segments.get(),
                         skip_existing=self.skip_existing.get(),
+                        enable_diarization=self.enable_diarization.get(),
+                        num_speakers=self.num_speakers.get() if self.enable_diarization.get() else None,
+                        known_speaker_names=self.known_speaker_names if self.enable_diarization.get() else None,
+                        known_speaker_references=self.known_speaker_references if self.enable_diarization.get() else None,
                     )
 
-                    if result["status"] == "success":
+                    # Update progress tracker
+                    if result.get("status") == "success":
                         successful += 1
+                        duration_min = result.get("duration_seconds", 0) / 60.0
+                        num_segments = result.get("segments", 0)
+                        progress.update_file_completed(duration_min, num_segments)
                         self.log_message(f"✅ Erfolgreich: {result['output']}")
                         
                         # Generate summary if requested
@@ -719,16 +1165,90 @@ Länge der Transkription und dem gewählten Modell."""
                                     self.log_message(f"⚠️ Summary-Fehler: {summary_result.get('error', 'Unbekannt')}")
                             except Exception as e:
                                 self.log_message(f"⚠️ Summary-Ausnahme: {e}")
+                        
+                        # Export to additional formats if requested
+                        if any([self.export_docx_var.get(), self.export_md_var.get(), self.export_latex_var.get()]):
+                            from .exporter import TranscriptionExporter
+                            
+                            self.log_message("📄 Exportiere zu zusätzlichen Formaten...")
+                            exporter = TranscriptionExporter()
+                            export_dir = Path(self.export_dir.get())
+                            
+                            # Prepare metadata
+                            metadata = {
+                                "title": self.export_title.get() or audio_file.stem,
+                                "author": self.export_author.get(),
+                                "date": datetime.now().strftime("%Y-%m-%d"),
+                                "duration": format_duration(result.get("duration_seconds", 0)),
+                                "language": result.get("language"),
+                                "model": self.model.get(),
+                            }
+                            
+                            # Export DOCX
+                            if self.export_docx_var.get():
+                                try:
+                                    export_file = export_dir / f"{audio_file.stem}.docx"
+                                    export_result = exporter.export(
+                                        transcription_file=Path(result["output"]),
+                                        output_file=export_file,
+                                        export_format="docx",
+                                        metadata=metadata,
+                                    )
+                                    if export_result.get("status") == "success":
+                                        self.log_message(f"  ✅ DOCX: {export_file.name}")
+                                except Exception as e:
+                                    self.log_message(f"  ⚠️  DOCX Export fehlgeschlagen: {e}")
+                            
+                            # Export Markdown
+                            if self.export_md_var.get():
+                                try:
+                                    export_file = export_dir / f"{audio_file.stem}.md"
+                                    export_result = exporter.export(
+                                        transcription_file=Path(result["output"]),
+                                        output_file=export_file,
+                                        export_format="md",
+                                        metadata=metadata,
+                                    )
+                                    if export_result.get("status") == "success":
+                                        self.log_message(f"  ✅ Markdown: {export_file.name}")
+                                except Exception as e:
+                                    self.log_message(f"  ⚠️  Markdown Export fehlgeschlagen: {e}")
+                            
+                            # Export LaTeX
+                            if self.export_latex_var.get():
+                                try:
+                                    export_file = export_dir / f"{audio_file.stem}.tex"
+                                    export_result = exporter.export(
+                                        transcription_file=Path(result["output"]),
+                                        output_file=export_file,
+                                        export_format="latex",
+                                        metadata=metadata,
+                                    )
+                                    if export_result.get("status") == "success":
+                                        self.log_message(f"  ✅ LaTeX: {export_file.name}")
+                                except Exception as e:
+                                    self.log_message(f"  ⚠️  LaTeX Export fehlgeschlagen: {e}")
                                 
-                    elif result["status"] == "skipped":
-                        self.log_message("⊘ Übersprungen: bereits vorhanden")
-                    else:
+                    elif result.get("status") == "error":
                         failed += 1
+                        progress.update_file_failed()
                         self.log_message(f"❌ Fehler: {result.get('error', 'Unbekannt')}")
+                    elif result.get("status") == "skipped":
+                        progress.update_file_skipped()
+                        self.log_message("⊘ Übersprungen: bereits vorhanden")
+
+                    # Update progress UI in real-time
+                    self.update_progress_ui(progress)
 
                 except Exception as e:
                     failed += 1
+                    progress.update_file_failed()
                     self.log_message(f"❌ Ausnahme: {e}")
+                    self.update_progress_ui(progress)
+
+            # Final progress update
+            self.progress_bar["value"] = 100
+            self.progress_label.config(text="100%")
 
             # Summary
             self.log_message("\n" + "=" * 70)
@@ -736,6 +1256,13 @@ Länge der Transkription und dem gewählten Modell."""
             self.log_message("=" * 70)
             self.log_message(f"✅ Erfolgreich: {successful}")
             self.log_message(f"❌ Fehlgeschlagen: {failed}")
+            
+            # Print detailed progress summary
+            summary = progress.get_summary()
+            self.log_message(f"\n⏱ Vergangene Zeit: {summary['time']['elapsed_formatted']}")
+            if summary['throughput']['value']:
+                self.log_message(f"📊 Durchsatz: {summary['throughput']['formatted']}")
+            self.log_message(f"💰 Endkosten: ${summary['cost']['current']:.4f}")
             self.log_message("=" * 70)
 
             if failed == 0 and successful > 0:
@@ -763,40 +1290,7 @@ Länge der Transkription und dem gewählten Modell."""
             self.is_processing = False
             self.log_message("\n⏹ Stoppe Transkription...")
 
-    def _change_language(self, event=None):
-        """Change application language."""
-        new_lang = self.current_language.get()
-        self.i18n.set_language(new_lang)
-        self._update_texts()
 
-    def _update_texts(self):
-        """Update all UI texts according to current language."""
-        _ = self.i18n
-
-        # Update window title
-        self.root.title(f"{_.get('window_title')} v{__version__}")
-
-        # Update tab titles
-        self.notebook.tab(0, text=_.get("tab_main"))
-        self.notebook.tab(1, text=_.get("tab_api"))
-        self.notebook.tab(2, text="Segmente")
-        self.notebook.tab(3, text=_.get("tab_transcription"))
-
-        # Update LabelFrame texts
-        self.input_frame.config(text=_.get("input"))
-        self.output_frame.config(text=_.get("output"))
-        self.behavior_frame.config(text=_.get("behavior"))
-
-        # Update all stored widgets
-        for key, (trans_key, widget) in self.widgets_to_translate.items():
-            try:
-                if isinstance(widget, (ttk.Label, ttk.Button, ttk.Checkbutton)):
-                    widget.config(text=_.get(trans_key))
-                elif isinstance(widget, ttk.LabelFrame):
-                    widget.config(text=_.get(trans_key))
-            except Exception:
-                # Silently ignore if widget no longer exists
-                pass
 
 
 def main():

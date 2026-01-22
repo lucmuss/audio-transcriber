@@ -86,8 +86,8 @@ class TestAudioTranscriber:
         output_dir = tmp_path / "output"
         output_dir.mkdir()
 
-        # Create existing output file
-        existing_output = output_dir / "test_full.text"
+        # Create existing output file (must match naming pattern: {stem}_{ext}_full.{format})
+        existing_output = output_dir / "test_mp3_full.text"
         existing_output.write_text("existing transcription")
 
         result = self.transcriber.transcribe_file(audio_file, output_dir, skip_existing=True)
@@ -408,8 +408,15 @@ class TestAudioTranscriber:
         segment_file.touch()
 
         with patch.object(self.transcriber.client.audio.transcriptions, "create") as mock_create:
+            # Create proper APIError instances with message and request
+            mock_request = Mock()
+            mock_request.method = "POST"
+            mock_request.url = "https://api.openai.com/v1/audio/transcriptions"
+            
             # Fail twice, then succeed
-            mock_create.side_effect = [APIError("Rate limit"), APIError("Server error"), "Success"]
+            error1 = APIError(message="Rate limit", request=mock_request, body=None)
+            error2 = APIError(message="Server error", request=mock_request, body=None)
+            mock_create.side_effect = [error1, error2, "Success"]
 
             result = self.transcriber._transcribe_segment(
                 segment_file,
@@ -429,7 +436,12 @@ class TestAudioTranscriber:
         segment_file.touch()
 
         with patch.object(self.transcriber.client.audio.transcriptions, "create") as mock_create:
-            mock_create.side_effect = APIError("Persistent error")
+            # Create proper APIError instance
+            mock_request = Mock()
+            mock_request.method = "POST"
+            mock_request.url = "https://api.openai.com/v1/audio/transcriptions"
+            error = APIError(message="Persistent error", request=mock_request, body=None)
+            mock_create.side_effect = error
 
             result = self.transcriber._transcribe_segment(
                 segment_file,
@@ -507,18 +519,21 @@ class TestAudioTranscriber:
         for seg in segment_files:
             seg.touch()
 
-        mock_future = Mock()
-        mock_future.result.return_value = "transcription"
+        # Create separate mock futures for each segment
+        mock_futures = [Mock() for _ in range(4)]
+        for future in mock_futures:
+            future.result.return_value = "transcription"
 
-        mock_executor_instance = Mock()
-        mock_executor_instance.submit.return_value = mock_future
+        # Create mock executor instance with proper context manager support
+        mock_executor_instance = MagicMock()
+        mock_executor_instance.submit.side_effect = mock_futures
         mock_executor_instance.__enter__.return_value = mock_executor_instance
         mock_executor_instance.__exit__.return_value = None
 
         mock_executor.return_value = mock_executor_instance
 
         with patch("audio_transcriber.transcriber.as_completed") as mock_as_completed:
-            mock_as_completed.return_value = [mock_future] * 4
+            mock_as_completed.return_value = mock_futures
 
             transcriptions, failed = self.transcriber._transcribe_segments(
                 segment_files=segment_files,

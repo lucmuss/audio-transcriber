@@ -146,6 +146,8 @@ cython_debug/
 # Project specific
 transcriptions/
 segments/
+summaries/
+exports/
 *.mp3
 *.wav
 *.m4a
@@ -154,6 +156,8 @@ segments/
 *.aac
 *.wma
 *.mp4
+*.m4a
+*.Identifier
 !examples/**/*.mp3
 !examples/**/*.wav
 

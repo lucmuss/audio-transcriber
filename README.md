@@ -9,18 +9,21 @@ Professional audio transcription tool using OpenAI-compatible Speech-to-Text API
 
 ## ✨ Features
 
-- **🖥️ GUI & CLI Interfaces** - Benutzerfreundliche grafische Oberfläche + leistungsstarkes Command-Line-Tool
+- **🖥️ GUI & CLI Interfaces** - User-friendly graphical interface + powerful command-line tool
 - **🔄 Intelligent Segmentation** - Automatically splits large audio files into processable chunks
 - **⚡ Parallel Processing** - Concurrent transcription of multiple segments for faster results
+- **🎙️ Speaker Diarization** - Identify and label different speakers in conversations
+- **📝 AI Summarization** - Generate concise summaries of transcriptions
+- **📄 Multi-Format Export** - Export to DOCX, Markdown, and LaTeX with metadata
 - **🎯 Smart Merging** - Overlap detection and removal for seamless final transcripts
 - **🌍 Multi-Format Support** - MP3, WAV, FLAC, M4A, OGG, AAC, WMA, MP4
-- **📝 Multiple Output Formats** - Text, JSON, SRT, VTT subtitles, Verbose JSON
+- **📋 Multiple Output Formats** - Text, JSON, SRT, VTT subtitles, Verbose JSON, Diarized JSON
 - **🔌 OpenAI-Compatible** - Works with OpenAI, Ollama, Groq, LocalAI, Azure, Together.ai
 - **🔁 Resume Capability** - Automatically skips already processed files
-- **📊 Progress Tracking** - Real-time progress bars and detailed statistics
+- **📊 Live Progress Tracking** - Real-time ETA, throughput, and cost tracking
 - **🌐 Language Detection** - Automatic language detection from audio
-- **💰 Cost Estimation** - Calculates estimated transcription costs
-- **📁 Separate Output Folders** - Transcriptions and segments in dedicated folders
+- **💰 Cost Estimation** - Live cost calculation during processing
+- **📁 Organized Output** - Separate folders for transcriptions, segments, summaries, and exports
 
 ## 📋 Table of Contents
 
@@ -177,32 +180,90 @@ audio-transcriber \
 
 ### Command-Line Options
 
+#### Required Arguments
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-i, --input` | Path to audio file or directory | Required |
-| `-o, --output-dir` | Output directory | `./transcriptions` |
+| `-i, --input` | Path to audio file or directory | **Required** |
+
+#### API Configuration
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--api-key` | API key | From `AUDIO_TRANSCRIBE_API_KEY` |
+| `--base-url` | API base URL | `https://api.openai.com/v1` |
+| `--model` | Model name | `gpt-4o-mini-transcribe` |
+
+#### Output Configuration
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-o, --output-dir` | Output directory for transcriptions | `./transcriptions` |
+| `--segments-dir` | Directory for temporary segments | `./segments` |
 | `-f, --response-format` | Output format (text/json/srt/vtt/verbose_json) | `text` |
-| `--segment-length` | Segment length in seconds | `600` (10 min) |
-| `--overlap` | Overlap between segments in seconds | `10` |
-| `-c, --concurrency` | Number of parallel transcriptions | `4` |
+
+#### Segmentation Parameters
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--segment-length` | Segment length in seconds | `300` (5 min) |
+| `--overlap` | Overlap between segments in seconds | `3` |
+
+#### Transcription Parameters
+| Option | Description | Default |
+|--------|-------------|---------|
 | `--language` | ISO-639-1 language code (e.g., 'en', 'de') | Auto-detect |
+| `--detect-language` | Auto-detect language from first segment | `true` |
+| `--no-detect-language` | Disable language auto-detection | - |
 | `--temperature` | Model temperature (0.0-1.0) | `0.0` |
-| `--model` | Model name | `whisper-1` |
-| `--api-key` | API key | From env var |
-| `--base-url` | API base URL | OpenAI endpoint |
-| `--keep-segments` | Keep temporary segment files | `false` |
+| `--prompt` | Context prompt for better accuracy | None |
+
+#### Performance Parameters
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-c, --concurrency` | Number of parallel transcriptions | `8` |
+
+#### Diarization Parameters (Speaker Recognition)
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--enable-diarization` | Enable speaker diarization | `false` |
+| `--num-speakers` | Expected number of speakers | Auto-detect |
+| `--known-speaker-names` | List of known speaker names | None |
+| `--known-speaker-references` | Paths to reference audio files | None |
+
+#### Summarization Parameters
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--summarize` | Generate a summary of transcription | `false` |
+| `--summary-dir` | Output directory for summaries | `./summaries` |
+| `--summary-model` | Model for summarization | `gpt-4.1-mini` |
+| `--summary-prompt` | Custom prompt for summary generation | See code |
+
+#### Export Parameters
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--export` | Export to formats (docx, md, latex) | None |
+| `--export-dir` | Output directory for exports | `./exports` |
+| `--export-title` | Title for exported documents | Filename |
+| `--export-author` | Author name for exported documents | None |
+
+#### Behavior Options
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--no-keep-segments` | Delete temporary segment files after processing | - |
+| `--skip-existing` | Skip files if output already exists | `false` |
+| `--analyze-duration` | Analyze audio duration before processing (slower, better ETA) | `false` |
+| `--dry-run` | Simulate processing without API calls | `false` |
 | `-v, --verbose` | Enable verbose logging | `false` |
+
+**Note:** By default, segments are kept and files are re-processed even if outputs exist.
 
 ### Environment Variables
 
 ```bash
 export AUDIO_TRANSCRIBE_API_KEY="sk-..."
 export AUDIO_TRANSCRIBE_BASE_URL="https://api.openai.com/v1"
-export AUDIO_TRANSCRIBE_MODEL="whisper-1"
+export AUDIO_TRANSCRIBE_MODEL="gpt-4o-mini-transcribe"
 export AUDIO_TRANSCRIBE_OUTPUT_DIR="./transcriptions"
-export AUDIO_TRANSCRIBE_SEGMENT_LENGTH="600"
-export AUDIO_TRANSCRIBE_OVERLAP="10"
-export AUDIO_TRANSCRIBE_CONCURRENCY="4"
+export AUDIO_TRANSCRIBE_SEGMENT_LENGTH="300"
+export AUDIO_TRANSCRIBE_OVERLAP="3"
+export AUDIO_TRANSCRIBE_CONCURRENCY="8"
 ```
 
 ## 📄 Output Formats
@@ -266,6 +327,60 @@ audio-transcriber --input ./audio_files  # Resumes from where it left off
 ```bash
 # Test configuration without API calls
 audio-transcriber --input large_file.mp3 --dry-run
+```
+
+### Speaker Diarization (Who Said What)
+
+```bash
+# Enable speaker diarization
+audio-transcriber \
+  --input meeting.mp3 \
+  --enable-diarization
+
+# With expected number of speakers
+audio-transcriber \
+  --input podcast.mp3 \
+  --enable-diarization \
+  --num-speakers 2
+
+# With known speaker names and reference audio
+audio-transcriber \
+  --input interview.mp3 \
+  --enable-diarization \
+  --known-speaker-names "Alice Smith" "Bob Johnson" \
+  --known-speaker-references alice_voice.wav bob_voice.wav
+```
+
+### AI Summarization
+
+```bash
+# Generate summary of transcription
+audio-transcriber \
+  --input lecture.mp3 \
+  --summarize
+
+# Custom summary model and prompt
+audio-transcriber \
+  --input podcast.mp3 \
+  --summarize \
+  --summary-model gpt-4o \
+  --summary-prompt "Summarize the key points and action items"
+```
+
+### Document Export
+
+```bash
+# Export to Word document
+audio-transcriber \
+  --input meeting.mp3 \
+  --export docx
+
+# Export to multiple formats with metadata
+audio-transcriber \
+  --input interview.mp3 \
+  --export docx md latex \
+  --export-title "Company Interview 2026" \
+  --export-author "John Doe"
 ```
 
 ### Integration with Other Services
@@ -392,15 +507,6 @@ Built with:
 - **Issues:** [GitHub Issues](https://github.com/lucmuss/audio-transcriber/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/lucmuss/audio-transcriber/discussions)
 - **Documentation:** [README](https://github.com/lucmuss/audio-transcriber#readme)
-
-## 🗺️ Roadmap
-
-- [ ] GUI interface
-- [ ] Speaker diarization (identify different speakers)
-- [ ] Real-time transcription
-- [ ] Cloud deployment templates
-- [ ] Additional language models support
-- [ ] Docker container
 
 ---
 

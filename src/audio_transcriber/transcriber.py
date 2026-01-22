@@ -13,6 +13,8 @@ from tqdm import tqdm
 
 from .constants import (
     DEFAULT_CONCURRENCY,
+    DEFAULT_DIARIZATION_FORMAT,
+    DEFAULT_DIARIZATION_MODEL,
     DEFAULT_MAX_RETRIES,
     DEFAULT_MODEL,
     DEFAULT_OVERLAP,
@@ -22,6 +24,7 @@ from .constants import (
     DEFAULT_SUMMARY_PROMPT,
     DEFAULT_TEMPERATURE,
 )
+from .diarizer import format_diarized_transcript, to_data_url
 from .merger import TranscriptionMerger
 from .segmenter import AudioSegmenter
 from .utils import format_duration, validate_segment_params
@@ -77,6 +80,10 @@ class AudioTranscriber:
         keep_segments: bool = False,
         skip_existing: bool = True,
         save_segment_transcriptions: bool = True,
+        enable_diarization: bool = False,
+        num_speakers: Optional[int] = None,
+        known_speaker_names: Optional[List[str]] = None,
+        known_speaker_references: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Transcribe a single audio file.
@@ -108,6 +115,19 @@ class AudioTranscriber:
         logger.info(f"\n{'='*70}")
         logger.info(f"Processing: {file_path.name}")
         logger.info(f"{'='*70}")
+        
+        # Override model and format if diarization is enabled
+        effective_model = self.model
+        effective_format = response_format
+        
+        if enable_diarization:
+            effective_model = DEFAULT_DIARIZATION_MODEL
+            effective_format = DEFAULT_DIARIZATION_FORMAT
+            logger.info("🎤 Diarization enabled - using gpt-4o-transcribe-diarize")
+            if num_speakers:
+                logger.info(f"Expected speakers: {num_speakers}")
+            if known_speaker_names:
+                logger.info(f"Known speakers: {', '.join(known_speaker_names)}")
 
         # Check if already processed
         # Include original extension in output name to avoid collisions
@@ -159,17 +179,32 @@ class AudioTranscriber:
             except Exception as e:
                 logger.warning(f"Language detection failed: {e}")
 
+        # Prepare speaker references if provided
+        speaker_references = None
+        if enable_diarization and known_speaker_references:
+            try:
+                speaker_references = [to_data_url(Path(ref)) for ref in known_speaker_references]
+                logger.info(f"Prepared {len(speaker_references)} speaker reference(s)")
+            except Exception as e:
+                logger.warning(f"Failed to prepare speaker references: {e}")
+                speaker_references = None
+        
         # Transcribe segments
         transcriptions, failed_count = self._transcribe_segments(
             segment_files=segment_files,
             language=detected_language,
-            response_format=response_format,
+            response_format=effective_format,
             temperature=temperature,
             prompt=prompt,
             concurrency=concurrency,
             output_dir=output_dir if save_segment_transcriptions else None,
             file_stem=file_stem,
             file_ext=file_ext,
+            effective_model=effective_model,
+            enable_diarization=enable_diarization,
+            num_speakers=num_speakers,
+            known_speaker_names=known_speaker_names,
+            speaker_references=speaker_references,
         )
 
         if not transcriptions:
@@ -197,6 +232,23 @@ class AudioTranscriber:
         try:
             output_file.write_text(merged_text, encoding="utf-8")
             logger.info(f"Saved transcription: {output_file.name}")
+            
+            # If diarization is enabled, also save a human-readable version
+            if enable_diarization and effective_format == "diarized_json":
+                readable_filename = (
+                    f"{file_stem}_{file_ext}_full_readable.txt"
+                    if file_ext
+                    else f"{file_stem}_full_readable.txt"
+                )
+                readable_file = output_dir / readable_filename
+                
+                try:
+                    readable_text = format_diarized_transcript(merged_text, include_timestamps=True)
+                    readable_file.write_text(readable_text, encoding="utf-8")
+                    logger.info(f"Saved readable diarized transcription: {readable_file.name}")
+                except Exception as e:
+                    logger.warning(f"Failed to create readable version: {e}")
+                    
         except Exception as e:
             logger.error(f"Failed to save output: {e}")
             self._cleanup_segments(segment_files, keep_segments)
@@ -206,7 +258,7 @@ class AudioTranscriber:
         if not keep_segments:
             self._cleanup_segments(segment_files)
 
-        return {
+        result = {
             "file": str(file_path),
             "status": "success",
             "output": str(output_file),
@@ -216,6 +268,14 @@ class AudioTranscriber:
             "duration_seconds": duration_seconds,
             "language": detected_language,
         }
+        
+        # Add diarization info if enabled
+        if enable_diarization:
+            result["diarization_enabled"] = True
+            if enable_diarization and effective_format == "diarized_json":
+                result["readable_output"] = str(output_dir / readable_filename)
+        
+        return result
 
     def _detect_language(self, segment_file: Path) -> Optional[str]:
         """Detect language from first audio segment."""
@@ -246,6 +306,11 @@ class AudioTranscriber:
         output_dir: Optional[Path] = None,
         file_stem: str = "",
         file_ext: str = "",
+        effective_model: str = DEFAULT_MODEL,
+        enable_diarization: bool = False,
+        num_speakers: Optional[int] = None,
+        known_speaker_names: Optional[List[str]] = None,
+        speaker_references: Optional[List[str]] = None,
     ) -> Tuple[List[str], int]:
         """
         Transcribe segments in parallel.
@@ -254,6 +319,11 @@ class AudioTranscriber:
             output_dir: If provided, save individual segment transcriptions
             file_stem: Base filename for segment transcriptions
             file_ext: File extension for segment transcriptions
+            effective_model: Model to use (may be overridden for diarization)
+            enable_diarization: Whether diarization is enabled
+            num_speakers: Expected number of speakers
+            known_speaker_names: List of known speaker names
+            speaker_references: List of data URLs for speaker references
 
         Returns:
             Tuple of (transcription_list, failed_count)
@@ -272,6 +342,11 @@ class AudioTranscriber:
                     response_format=response_format,
                     temperature=temperature,
                     prompt=prompt,
+                    effective_model=effective_model,
+                    enable_diarization=enable_diarization,
+                    num_speakers=num_speakers,
+                    known_speaker_names=known_speaker_names,
+                    speaker_references=speaker_references,
                 ): i
                 for i, seg_file in enumerate(segment_files)
             }
@@ -320,10 +395,28 @@ class AudioTranscriber:
         response_format: str,
         temperature: float,
         prompt: Optional[str],
+        effective_model: str = DEFAULT_MODEL,
+        enable_diarization: bool = False,
+        num_speakers: Optional[int] = None,
+        known_speaker_names: Optional[List[str]] = None,
+        speaker_references: Optional[List[str]] = None,
         max_retries: int = DEFAULT_MAX_RETRIES,
     ) -> Optional[str]:
         """
-        Transcribe a single segment with retry logic.
+        Transcribe a single segment with retry logic and optional diarization.
+
+        Args:
+            segment_file: Path to audio segment file
+            language: Language code
+            response_format: Response format
+            temperature: Model temperature
+            prompt: Context prompt
+            effective_model: Model to use (may be diarization model)
+            enable_diarization: Whether to use diarization
+            num_speakers: Expected number of speakers
+            known_speaker_names: List of known speaker names
+            speaker_references: List of data URLs for speaker references
+            max_retries: Maximum retry attempts
 
         Returns:
             Transcription string or None if failed
@@ -335,7 +428,7 @@ class AudioTranscriber:
             try:
                 with open(segment_file, "rb") as f:
                     kwargs = {
-                        "model": self.model,
+                        "model": effective_model,
                         "file": f,
                         "response_format": response_format,
                         "temperature": temperature,
@@ -346,11 +439,36 @@ class AudioTranscriber:
                     if prompt:
                         kwargs["prompt"] = prompt
 
+                    # Add diarization-specific parameters
+                    if enable_diarization:
+                        kwargs["chunking_strategy"] = "auto"
+                        
+                        # Build extra_body for diarization parameters
+                        extra_body = {}
+                        
+                        if num_speakers:
+                            extra_body["num_speakers"] = num_speakers
+                        
+                        if known_speaker_names:
+                            extra_body["known_speaker_names"] = known_speaker_names
+                        
+                        if speaker_references:
+                            extra_body["known_speaker_references"] = speaker_references
+                        
+                        if extra_body:
+                            kwargs["extra_body"] = extra_body
+
                     response = self.client.audio.transcriptions.create(**kwargs)
 
                 # Handle different response types
                 if response_format == "text":
                     return response if isinstance(response, str) else str(response)
+                elif response_format == "diarized_json":
+                    # For diarized_json, we get the raw JSON response
+                    if hasattr(response, "model_dump_json"):
+                        return response.model_dump_json()
+                    else:
+                        return str(response)
                 else:
                     return (
                         response.model_dump_json()
