@@ -115,11 +115,11 @@ class AudioTranscriber:
         logger.info(f"\n{'='*70}")
         logger.info(f"Processing: {file_path.name}")
         logger.info(f"{'='*70}")
-        
+
         # Override model and format if diarization is enabled
         effective_model = self.model
         effective_format = response_format
-        
+
         if enable_diarization:
             effective_model = DEFAULT_DIARIZATION_MODEL
             effective_format = DEFAULT_DIARIZATION_FORMAT
@@ -188,7 +188,7 @@ class AudioTranscriber:
             except Exception as e:
                 logger.warning(f"Failed to prepare speaker references: {e}")
                 speaker_references = None
-        
+
         # Transcribe segments
         transcriptions, failed_count = self._transcribe_segments(
             segment_files=segment_files,
@@ -232,7 +232,7 @@ class AudioTranscriber:
         try:
             output_file.write_text(merged_text, encoding="utf-8")
             logger.info(f"Saved transcription: {output_file.name}")
-            
+
             # If diarization is enabled, also save a human-readable version
             if enable_diarization and effective_format == "diarized_json":
                 readable_filename = (
@@ -241,14 +241,14 @@ class AudioTranscriber:
                     else f"{file_stem}_full_readable.txt"
                 )
                 readable_file = output_dir / readable_filename
-                
+
                 try:
                     readable_text = format_diarized_transcript(merged_text, include_timestamps=True)
                     readable_file.write_text(readable_text, encoding="utf-8")
                     logger.info(f"Saved readable diarized transcription: {readable_file.name}")
                 except Exception as e:
                     logger.warning(f"Failed to create readable version: {e}")
-                    
+
         except Exception as e:
             logger.error(f"Failed to save output: {e}")
             self._cleanup_segments(segment_files, keep_segments)
@@ -268,13 +268,13 @@ class AudioTranscriber:
             "duration_seconds": duration_seconds,
             "language": detected_language,
         }
-        
+
         # Add diarization info if enabled
         if enable_diarization:
             result["diarization_enabled"] = True
             if enable_diarization and effective_format == "diarized_json":
                 result["readable_output"] = str(output_dir / readable_filename)
-        
+
         return result
 
     def _detect_language(self, segment_file: Path) -> Optional[str]:
@@ -358,7 +358,7 @@ class AudioTranscriber:
                         result = future.result()
                         if result:
                             transcriptions[index] = result
-                            
+
                             # Save individual segment transcription if output_dir is provided
                             if output_dir:
                                 segment_num = index + 1
@@ -368,12 +368,14 @@ class AudioTranscriber:
                                     else f"{file_stem}_segment_{segment_num:03d}.{response_format}"
                                 )
                                 segment_output_file = output_dir / segment_filename
-                                
+
                                 try:
                                     segment_output_file.write_text(result, encoding="utf-8")
                                     logger.debug(f"Saved segment transcription: {segment_filename}")
                                 except Exception as e:
-                                    logger.warning(f"Failed to save segment {segment_num} transcription: {e}")
+                                    logger.warning(
+                                        f"Failed to save segment {segment_num} transcription: {e}"
+                                    )
                         else:
                             failed_count += 1
                             logger.warning(f"Segment {index + 1} failed")
@@ -442,19 +444,19 @@ class AudioTranscriber:
                     # Add diarization-specific parameters
                     if enable_diarization:
                         kwargs["chunking_strategy"] = "auto"
-                        
+
                         # Build extra_body for diarization parameters
-                        extra_body = {}
-                        
+                        extra_body: Dict[str, Any] = {}
+
                         if num_speakers:
                             extra_body["num_speakers"] = num_speakers
-                        
+
                         if known_speaker_names:
                             extra_body["known_speaker_names"] = known_speaker_names
-                        
+
                         if speaker_references:
                             extra_body["known_speaker_references"] = speaker_references
-                        
+
                         if extra_body:
                             kwargs["extra_body"] = extra_body
 
@@ -466,12 +468,12 @@ class AudioTranscriber:
                 elif response_format == "diarized_json":
                     # For diarized_json, we get the raw JSON response
                     if hasattr(response, "model_dump_json"):
-                        return response.model_dump_json()
+                        return str(response.model_dump_json())
                     else:
                         return str(response)
                 else:
                     return (
-                        response.model_dump_json()
+                        str(response.model_dump_json())
                         if hasattr(response, "model_dump_json")
                         else str(response)
                     )

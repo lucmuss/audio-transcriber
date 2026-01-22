@@ -9,7 +9,9 @@ max-line-length = 100
 # E402: Module level import not at top of file
 # F401: Module imported but unused (in __init__.py)
 # C901: Function is too complex (acceptable for main orchestration methods)
-extend-ignore = E203,E501,W503,E402,F401,C901
+# F541: f-string without placeholders (sometimes used for consistency)
+# W293: Blank line contains whitespace (minor formatting)
+extend-ignore = E203,E501,W503,E402,F401,C901,F541,W293
 
 # Exclude paths
 exclude =

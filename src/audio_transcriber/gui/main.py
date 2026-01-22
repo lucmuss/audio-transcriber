@@ -90,7 +90,9 @@ class AudioTranscriberGUI:
         # Summarization
         self.summarize = tk.BooleanVar(value=False)
         self.summary_dir = tk.StringVar(value="./summaries")
-        self.summary_model = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL))
+        self.summary_model = tk.StringVar(
+            value=os.getenv(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL)
+        )
         self.summary_prompt = tk.StringVar(value=DEFAULT_SUMMARY_PROMPT)
 
         # Export
@@ -98,6 +100,10 @@ class AudioTranscriberGUI:
         self.export_dir = tk.StringVar(value="./exports")
         self.export_title = tk.StringVar(value="")
         self.export_author = tk.StringVar(value="")
+        # Export format checkboxes (will be set by create_export_tab)
+        self.export_docx_var = tk.BooleanVar(value=False)
+        self.export_md_var = tk.BooleanVar(value=False)
+        self.export_latex_var = tk.BooleanVar(value=False)
 
         # Processing state
         self.is_processing = False
@@ -152,8 +158,16 @@ class AudioTranscriberGUI:
 
         # Bottom: Progress and Control
         result = create_progress_section(self.root, self)
-        (self.progress_bar, self.progress_label, self.eta_label, self.throughput_label, 
-         self.cost_label, self.log_text, self.start_button, self.stop_button) = result
+        (
+            self.progress_bar,
+            self.progress_label,
+            self.eta_label,
+            self.throughput_label,
+            self.cost_label,
+            self.log_text,
+            self.start_button,
+            self.stop_button,
+        ) = result
 
     def log_message(self, message: str):
         """Add message to log output."""
@@ -314,9 +328,15 @@ class AudioTranscriberGUI:
                         keep_segments=self.keep_segments.get(),
                         skip_existing=self.skip_existing.get(),
                         enable_diarization=self.enable_diarization.get(),
-                        num_speakers=self.num_speakers.get() if self.enable_diarization.get() else None,
-                        known_speaker_names=self.known_speaker_names if self.enable_diarization.get() else None,
-                        known_speaker_references=self.known_speaker_references if self.enable_diarization.get() else None,
+                        num_speakers=(
+                            self.num_speakers.get() if self.enable_diarization.get() else None
+                        ),
+                        known_speaker_names=(
+                            self.known_speaker_names if self.enable_diarization.get() else None
+                        ),
+                        known_speaker_references=(
+                            self.known_speaker_references if self.enable_diarization.get() else None
+                        ),
                     )
 
                     # Update progress tracker
@@ -339,16 +359,26 @@ class AudioTranscriberGUI:
                                     skip_existing=self.skip_existing.get(),
                                 )
                                 if summary_result["status"] == "success":
-                                    self.log_message(f"✅ Summary erstellt: {summary_result['summary_file']}")
+                                    self.log_message(
+                                        f"✅ Summary erstellt: {summary_result['summary_file']}"
+                                    )
                                 elif summary_result["status"] == "skipped":
                                     self.log_message("⊘ Summary übersprungen: bereits vorhanden")
                                 else:
-                                    self.log_message(f"⚠️ Summary-Fehler: {summary_result.get('error', 'Unbekannt')}")
+                                    self.log_message(
+                                        f"⚠️ Summary-Fehler: {summary_result.get('error', 'Unbekannt')}"
+                                    )
                             except Exception as e:
                                 self.log_message(f"⚠️ Summary-Ausnahme: {e}")
 
                         # Export to additional formats if requested
-                        if any([self.export_docx_var.get(), self.export_md_var.get(), self.export_latex_var.get()]):
+                        if any(
+                            [
+                                self.export_docx_var.get(),
+                                self.export_md_var.get(),
+                                self.export_latex_var.get(),
+                            ]
+                        ):
                             from ..exporter import TranscriptionExporter
 
                             self.log_message("📄 Exportiere zu zusätzlichen Formaten...")
@@ -441,7 +471,7 @@ class AudioTranscriberGUI:
             # Print detailed progress summary
             summary = progress.get_summary()
             self.log_message(f"\n⏱ Vergangene Zeit: {summary['time']['elapsed_formatted']}")
-            if summary['throughput']['value']:
+            if summary["throughput"]["value"]:
                 self.log_message(f"📊 Durchsatz: {summary['throughput']['formatted']}")
             self.log_message(f"💰 Endkosten: ${summary['cost']['current']:.4f}")
             self.log_message("=" * 70)

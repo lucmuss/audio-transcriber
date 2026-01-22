@@ -412,7 +412,7 @@ class TestAudioTranscriber:
             mock_request = Mock()
             mock_request.method = "POST"
             mock_request.url = "https://api.openai.com/v1/audio/transcriptions"
-            
+
             # Fail twice, then succeed
             error1 = APIError(message="Rate limit", request=mock_request, body=None)
             error2 = APIError(message="Server error", request=mock_request, body=None)

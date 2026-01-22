@@ -157,25 +157,25 @@ class TestCreateParser:
         """Test keep segments flag."""
         parser = create_parser()
 
-        # Default is False
+        # Default is True (changed from False)
         args = parser.parse_args(["--input", "test.mp3"])
-        assert args.keep_segments is False
-
-        # With flag
-        args = parser.parse_args(["--input", "test.mp3", "--keep-segments"])
         assert args.keep_segments is True
+
+        # With --no-keep-segments flag
+        args = parser.parse_args(["--input", "test.mp3", "--no-keep-segments"])
+        assert args.keep_segments is False
 
     def test_skip_existing_flag(self):
         """Test skip existing flag."""
         parser = create_parser()
 
-        # Default is True (skip_existing)
+        # Default is False (changed from True)
         args = parser.parse_args(["--input", "test.mp3"])
-        assert args.skip_existing is True
-
-        # --no-skip-existing
-        args = parser.parse_args(["--input", "test.mp3", "--no-skip-existing"])
         assert args.skip_existing is False
+
+        # --skip-existing
+        args = parser.parse_args(["--input", "test.mp3", "--skip-existing"])
+        assert args.skip_existing is True
 
     def test_dry_run_flag(self):
         """Test dry run flag."""
@@ -379,7 +379,7 @@ class TestPrintSummary:
         """Test summary with no results."""
         output = StringIO()
         with patch("sys.stdout", output):
-            print_summary([])
+            print_summary([], model="gpt-4o-mini-transcribe")
 
         result = output.getvalue()
         assert "TRANSCRIPTION SUMMARY" in result
@@ -406,7 +406,7 @@ class TestPrintSummary:
 
         output = StringIO()
         with patch("sys.stdout", output):
-            print_summary(results)
+            print_summary(results, model="gpt-4o-mini-transcribe")
 
         result = output.getvalue()
         assert "Files processed:     2" in result
@@ -424,7 +424,7 @@ class TestPrintSummary:
 
         output = StringIO()
         with patch("sys.stdout", output):
-            print_summary(results)
+            print_summary(results, model="gpt-4o-mini-transcribe")
 
         result = output.getvalue()
         assert "Files skipped:       2" in result
@@ -444,7 +444,7 @@ class TestPrintSummary:
 
         output = StringIO()
         with patch("sys.stdout", output):
-            print_summary(results)
+            print_summary(results, model="gpt-4o-mini-transcribe")
 
         result = output.getvalue()
         assert "Files failed:        1" in result
@@ -460,7 +460,7 @@ class TestPrintSummary:
 
         output = StringIO()
         with patch("sys.stdout", output):
-            print_summary(results, verbose=True)
+            print_summary(results, model="gpt-4o-mini-transcribe", verbose=True)
 
         result = output.getvalue()
         assert "Detailed results:" in result
@@ -666,8 +666,8 @@ class TestMain:
                 "8",
                 "--response-format",
                 "srt",
-                "--keep-segments",
-                "--no-skip-existing",
+                # Note: defaults changed - keep_segments=True, skip_existing=False
+                # So we don't need flags to set them to True/False respectively
             ],
         ):
             main()

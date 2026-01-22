@@ -537,6 +537,7 @@ def main() -> int:
 
                 # Prepare metadata
                 from datetime import datetime
+
                 metadata = {
                     "title": args.export_title or audio_file.stem,
                     "author": args.export_author,

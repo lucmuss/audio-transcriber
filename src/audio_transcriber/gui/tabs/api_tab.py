@@ -21,6 +21,7 @@ def create_api_tab(parent: ttk.Frame, gui_instance):
     api_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
 
     from ..utils import toggle_password_visibility
+
     show_password_btn = ttk.Button(
         api_settings_frame, text="Show", command=lambda: toggle_password_visibility(api_entry)
     )

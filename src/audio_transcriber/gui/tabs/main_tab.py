@@ -86,9 +86,9 @@ def create_main_tab(parent: ttk.Frame, gui_instance):
         variable=gui_instance.skip_existing,
     ).grid(row=1, column=0, sticky=tk.W, pady=2)
 
-    ttk.Checkbutton(
-        behavior_frame, text="Verbose logging", variable=gui_instance.verbose
-    ).grid(row=2, column=0, sticky=tk.W, pady=2)
+    ttk.Checkbutton(behavior_frame, text="Verbose logging", variable=gui_instance.verbose).grid(
+        row=2, column=0, sticky=tk.W, pady=2
+    )
 
     # Advanced Settings (Segmentation & Performance)
     advanced_frame = ttk.LabelFrame(parent, text="Advanced Settings", padding=10)
@@ -98,9 +98,9 @@ def create_main_tab(parent: ttk.Frame, gui_instance):
     seg_length_label = ttk.Label(advanced_frame, text="Segment Length (seconds):")
     seg_length_label.grid(row=0, column=0, sticky=tk.W, pady=5)
 
-    ttk.Spinbox(advanced_frame, from_=60, to=1800, textvariable=gui_instance.segment_length, width=10).grid(
-        row=0, column=1, padx=5, pady=5, sticky=tk.W
-    )
+    ttk.Spinbox(
+        advanced_frame, from_=60, to=1800, textvariable=gui_instance.segment_length, width=10
+    ).grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
 
     # Overlap
     overlap_label = ttk.Label(advanced_frame, text="Overlap (seconds):")
@@ -114,9 +114,9 @@ def create_main_tab(parent: ttk.Frame, gui_instance):
     parallel_label = ttk.Label(advanced_frame, text="Parallel Transcriptions:")
     parallel_label.grid(row=2, column=0, sticky=tk.W, pady=5)
 
-    ttk.Spinbox(advanced_frame, from_=1, to=16, textvariable=gui_instance.concurrency, width=10).grid(
-        row=2, column=1, padx=5, pady=5, sticky=tk.W
-    )
+    ttk.Spinbox(
+        advanced_frame, from_=1, to=16, textvariable=gui_instance.concurrency, width=10
+    ).grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
 
 
 def browse_file(gui_instance):

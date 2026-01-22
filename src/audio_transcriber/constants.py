@@ -39,7 +39,7 @@ DEFAULT_DIARIZATION_FORMAT = "diarized_json"
 
 # Summarization defaults
 DEFAULT_SUMMARY_MODEL = "gpt-4.1-mini"
-DEFAULT_SUMMARY_PROMPT = """Bitte erstelle eine ausführliche Zusammenfassung des folgenden Transkripts. 
+DEFAULT_SUMMARY_PROMPT = """Bitte erstelle eine ausführliche Zusammenfassung des folgenden Transkripts.
 Fokussiere dich auf die wichtigsten Punkte, Themen und Erkenntnisse."""
 
 # Pricing (per minute, in USD) - Model-specific rates
@@ -62,10 +62,10 @@ DEFAULT_MODEL_PRICE_PER_MINUTE = 0.006
 def get_model_price_per_minute(model_name: str) -> float:
     """
     Get the price per minute for a specific transcription model.
-    
+
     Args:
         model_name: Name of the transcription model
-        
+
     Returns:
         Price per minute in USD
     """

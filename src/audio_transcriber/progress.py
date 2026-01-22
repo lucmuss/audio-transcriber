@@ -344,7 +344,9 @@ class ProgressTracker:
             print(f"Durchsatz: {summary['throughput']['formatted']}")
 
         # Cost
-        print(f"\nKosten:    ${summary['cost']['current']:.4f} / ${summary['cost']['total_estimated']:.4f}")
+        print(
+            f"\nKosten:    ${summary['cost']['current']:.4f} / ${summary['cost']['total_estimated']:.4f}"
+        )
         print(f"Verbleibend: ${summary['cost']['remaining_estimated']:.4f}")
 
         print("=" * 70)

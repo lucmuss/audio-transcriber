@@ -6,12 +6,12 @@ import tkinter as tk
 from tkinter import scrolledtext, ttk
 
 
-def create_progress_section(parent: tk.Widget, gui_instance) -> tuple:
+def create_progress_section(parent: tk.Misc, gui_instance) -> tuple:
     """
     Create bottom section with progress display and control buttons.
-    
+
     Returns:
-        Tuple of (progress_bar, progress_label, eta_label, throughput_label, cost_label, log_text, 
+        Tuple of (progress_bar, progress_label, eta_label, throughput_label, cost_label, log_text,
                   start_button, stop_button)
     """
     bottom_frame = ttk.Frame(parent)
@@ -69,14 +69,24 @@ def create_progress_section(parent: tk.Widget, gui_instance) -> tuple:
     )
     stop_button.pack(side=tk.LEFT, padx=5)
 
-    clear_log_button = ttk.Button(button_frame, text="Clear Log", command=lambda: clear_log(log_text, gui_instance.root))
+    clear_log_button = ttk.Button(
+        button_frame, text="Clear Log", command=lambda: clear_log(log_text, gui_instance.root)
+    )
     clear_log_button.pack(side=tk.LEFT, padx=5)
 
     quit_button = ttk.Button(button_frame, text="Quit", command=gui_instance.root.quit)
     quit_button.pack(side=tk.RIGHT, padx=5)
 
-    return (progress_bar, progress_label, eta_label, throughput_label, cost_label, log_text, 
-            start_button, stop_button)
+    return (
+        progress_bar,
+        progress_label,
+        eta_label,
+        throughput_label,
+        cost_label,
+        log_text,
+        start_button,
+        stop_button,
+    )
 
 
 def clear_log(log_text: scrolledtext.ScrolledText, root: tk.Tk):

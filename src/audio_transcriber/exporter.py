@@ -297,9 +297,7 @@ class TranscriptionExporter:
             lines.append("")
 
             # Add metadata section if available
-            if metadata and any(
-                metadata.get(k) for k in ("duration", "language", "model")
-            ):
+            if metadata and any(metadata.get(k) for k in ("duration", "language", "model")):
                 lines.append(r"\section*{Metadata}")
                 lines.append(r"\begin{itemize}")
 

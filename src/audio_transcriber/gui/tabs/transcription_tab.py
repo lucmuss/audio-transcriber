@@ -18,7 +18,9 @@ def create_transcription_tab(parent: ttk.Frame, gui_instance):
     lang_entry = ttk.Entry(trans_settings_frame, textvariable=gui_instance.language, width=10)
     lang_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
 
-    lang_hint_label = ttk.Label(trans_settings_frame, text="(e.g., en, de, fr - leave empty for auto-detect)", font=("", 9))
+    lang_hint_label = ttk.Label(
+        trans_settings_frame, text="(e.g., en, de, fr - leave empty for auto-detect)", font=("", 9)
+    )
     lang_hint_label.grid(row=0, column=2, sticky=tk.W, padx=5)
 
     auto_detect_check = ttk.Checkbutton(
@@ -31,7 +33,12 @@ def create_transcription_tab(parent: ttk.Frame, gui_instance):
     temp_label.grid(row=2, column=0, sticky=tk.W, pady=5)
 
     ttk.Spinbox(
-        trans_settings_frame, from_=0.0, to=1.0, increment=0.1, textvariable=gui_instance.temperature, width=10
+        trans_settings_frame,
+        from_=0.0,
+        to=1.0,
+        increment=0.1,
+        textvariable=gui_instance.temperature,
+        width=10,
     ).grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
 
     # Prompt

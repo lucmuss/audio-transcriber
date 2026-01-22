@@ -15,7 +15,9 @@ def create_summary_tab(parent: ttk.Frame, gui_instance):
     summarize_check.pack(anchor=tk.W, padx=10, pady=10)
 
     # Summary Settings Frame
-    summary_settings_frame = ttk.LabelFrame(parent, text="Zusammenfassungs-Einstellungen", padding=10)
+    summary_settings_frame = ttk.LabelFrame(
+        parent, text="Zusammenfassungs-Einstellungen", padding=10
+    )
     summary_settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
     # Summary Directory
@@ -40,9 +42,7 @@ def create_summary_tab(parent: ttk.Frame, gui_instance):
     )
 
     model_hint = ttk.Label(
-        summary_settings_frame,
-        text="(z.B. gpt-4o-mini, gpt-4, gpt-3.5-turbo)",
-        font=("", 9)
+        summary_settings_frame, text="(z.B. gpt-4o-mini, gpt-4, gpt-3.5-turbo)", font=("", 9)
     )
     model_hint.grid(row=1, column=2, sticky=tk.W, padx=5)
 
@@ -71,12 +71,12 @@ def create_summary_tab(parent: ttk.Frame, gui_instance):
     info_frame = ttk.LabelFrame(parent, text="Information", padding=10)
     info_frame.pack(fill=tk.X, padx=10, pady=10)
 
-    info_text = """Die Zusammenfassungs-Funktion nutzt ein LLM (Large Language Model), 
-um automatisch eine prägnante Zusammenfassung der Transkription zu erstellen. 
+    info_text = """Die Zusammenfassungs-Funktion nutzt ein LLM (Large Language Model),
+um automatisch eine prägnante Zusammenfassung der Transkription zu erstellen.
 
 Die Zusammenfassung wird im angegebenen Summary-Ordner gespeichert.
 
-Hinweis: Dies verursacht zusätzliche API-Kosten basierend auf der 
+Hinweis: Dies verursacht zusätzliche API-Kosten basierend auf der
 Länge der Transkription und dem gewählten Modell."""
 
     ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(anchor=tk.W)

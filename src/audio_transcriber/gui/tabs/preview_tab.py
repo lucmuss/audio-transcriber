@@ -17,15 +17,11 @@ def create_preview_tab(parent: ttk.Frame, gui_instance):
     control_frame.pack(fill=tk.X, padx=10, pady=10)
 
     ttk.Button(
-        control_frame,
-        text="📂 Dateien analysieren",
-        command=lambda: analyze_files(gui_instance)
+        control_frame, text="📂 Dateien analysieren", command=lambda: analyze_files(gui_instance)
     ).pack(side=tk.LEFT, padx=5)
 
     ttk.Button(
-        control_frame,
-        text="🔄 Aktualisieren",
-        command=lambda: refresh_preview(gui_instance)
+        control_frame, text="🔄 Aktualisieren", command=lambda: refresh_preview(gui_instance)
     ).pack(side=tk.LEFT, padx=5)
 
     # File List Frame
@@ -75,7 +71,7 @@ def create_preview_tab(parent: ttk.Frame, gui_instance):
     gui_instance.stats_label = ttk.Label(
         stats_frame,
         text="Keine Dateien geladen. Klicken Sie auf 'Dateien analysieren'.",
-        font=("", 9)
+        font=("", 9),
     )
     gui_instance.stats_label.pack(anchor=tk.W)
 
@@ -85,7 +81,9 @@ def analyze_files(gui_instance):
     input_path = gui_instance.input_path.get()
 
     if not input_path:
-        messagebox.showwarning("Warnung", "Bitte wählen Sie zuerst eine Datei oder einen Ordner aus.")
+        messagebox.showwarning(
+            "Warnung", "Bitte wählen Sie zuerst eine Datei oder einen Ordner aus."
+        )
         return
 
     if not Path(input_path).exists():
@@ -132,16 +130,21 @@ def analyze_files(gui_instance):
                     "",
                     tk.END,
                     values=(audio_file.name, duration_str, size_str, format_str),
-                    tags=(str(audio_file),)  # Store full path in tags
+                    tags=(str(audio_file),),  # Store full path in tags
                 )
 
-            except Exception as e:
+            except Exception:
                 # If error, still add file but with error info
                 gui_instance.file_tree.insert(
                     "",
                     tk.END,
-                    values=(audio_file.name, "Fehler", "--", audio_file.suffix.upper().replace(".", "")),
-                    tags=(str(audio_file),)
+                    values=(
+                        audio_file.name,
+                        "Fehler",
+                        "--",
+                        audio_file.suffix.upper().replace(".", ""),
+                    ),
+                    tags=(str(audio_file),),
                 )
 
         # Update summary stats
@@ -201,7 +204,9 @@ def display_file_metadata(gui_instance, file_path: Path):
         lines.append("")
         lines.append("=== Audio-Informationen ===")
         lines.append(f"⏱ Dauer: {format_duration(len(audio) / 1000.0)}")
-        lines.append(f"🔊 Kanäle: {audio.channels} ({'Stereo' if audio.channels == 2 else 'Mono' if audio.channels == 1 else f'{audio.channels} Kanäle'})")
+        lines.append(
+            f"🔊 Kanäle: {audio.channels} ({'Stereo' if audio.channels == 2 else 'Mono' if audio.channels == 1 else f'{audio.channels} Kanäle'})"
+        )
         lines.append(f"📊 Sample-Rate: {audio.frame_rate} Hz")
         lines.append(f"🎚 Sample-Width: {audio.sample_width * 8} bit")
         lines.append(f"💾 Dateigröße: {file_path.stat().st_size / (1024*1024):.2f} MB")
@@ -229,8 +234,10 @@ def display_file_metadata(gui_instance, file_path: Path):
         lines.append("")
         lines.append("=== Transkriptions-Schätzung ===")
         lines.append(f"💰 Geschätzte Kosten: ${cost:.4f}")
-        lines.append(f"⏱ Geschätzte Dauer: ca. {duration_minutes / 10:.1f} - {duration_minutes / 5:.1f} Minuten")
-        lines.append(f"   (abhängig von Concurrency und Netzwerk)")
+        lines.append(
+            f"⏱ Geschätzte Dauer: ca. {duration_minutes / 10:.1f} - {duration_minutes / 5:.1f} Minuten"
+        )
+        lines.append("   (abhängig von Concurrency und Netzwerk)")
 
         gui_instance.metadata_text.insert("1.0", "\n".join(lines))
 
