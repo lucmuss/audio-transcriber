@@ -366,10 +366,10 @@ class AudioTranscriberGUI:
                                     self.log_message("⊘ Summary übersprungen: bereits vorhanden")
                                 else:
                                     self.log_message(
-                                        (
+
                                             "⚠️ Summary-Fehler: "
                                             f"{summary_result.get('error', 'Unbekannt')}"
-                                        )
+
                                     )
                             except Exception as e:
                                 self.log_message(f"⚠️ Summary-Ausnahme: {e}")

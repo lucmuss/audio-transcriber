@@ -3,7 +3,7 @@
 [![CI](https://github.com/lucmuss/audio-transcriber/workflows/CI/badge.svg)](https://github.com/lucmuss/audio-transcriber/actions)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
 Professional audio transcription tool using OpenAI-compatible Speech-to-Text APIs with intelligent segmentation and merging.
 
@@ -411,41 +411,53 @@ audio-transcriber \
 # Clone and install
 git clone https://github.com/lucmuss/audio-transcriber.git
 cd audio-transcriber
-python3 -m venv venv
-source venv/bin/activate
-pip install -e ".[dev]"
+
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Setup project with uv
+just setup
 
 # Install pre-commit hooks
-pre-commit install
+uv run pre-commit install
 ```
 
-### Run Tests
+### Development Workflow
+
+```bash
+# Start development environment (runs docker/entrypoint.sh)
+just dev
+
+# Format and fix code
+just format
+
+# Check code quality (lint + format check)
+just lint
+
+# Run tests
+just test
+
+# Run complete quality check (lint + typecheck + test)
+just check
+
+# Clean artifacts
+just clean
+```
+
+### Manual Commands (Alternative)
 
 ```bash
 # Run all tests
-pytest
+uv run pytest
 
 # With coverage
-pytest --cov=audio_transcriber --cov-report=html
+uv run pytest --cov=audio_transcriber --cov-report=html
 
 # Specific test file
-pytest tests/test_utils.py
-```
-
-### Code Quality
-
-```bash
-# Format code
-black src tests
-
-# Sort imports
-isort src tests
-
-# Lint
-flake8 src tests --max-line-length=100
+uv run pytest tests/test_utils.py
 
 # Type check
-mypy src
+uv run mypy src
 ```
 
 ## 📊 Performance & Costs

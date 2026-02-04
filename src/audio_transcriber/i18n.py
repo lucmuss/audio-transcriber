@@ -196,7 +196,7 @@ TRANSLATIONS: Dict[str, Dict[str, str]] = {
         "successful": "✅ Erfolgreich: {count}",
         "failed": "❌ Fehlgeschlagen: {count}",
         "finished_success": (
-            "Transkription abgeschlossen!\n" "{count} Datei(en) erfolgreich verarbeitet."
+            "Transkription abgeschlossen!\n{count} Datei(en) erfolgreich verarbeitet."
         ),
         "finished_with_errors": "Transkription abgeschlossen mit {count} Fehler(n).",
         "stopping": "⏹ Stoppe Transkription...",

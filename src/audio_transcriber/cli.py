@@ -284,8 +284,7 @@ For more information: https://github.com/lucmuss/audio-transcriber
         "--skip-existing",
         action="store_true",
         help=(
-            "Skip files if transcription output already exists "
-            "(by default files are re-processed)"
+            "Skip files if transcription output already exists (by default files are re-processed)"
         ),
     )
     behavior_group.add_argument(

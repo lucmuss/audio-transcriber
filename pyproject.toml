@@ -52,9 +52,7 @@ dependencies = [
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "flake8>=6.0.0",
+    "ruff>=0.1.0",
     "mypy>=1.5.0",
     "pre-commit>=3.3.0",
 ]
@@ -77,28 +75,51 @@ package-dir = {"" = "src"}
 [tool.setuptools.package-data]
 audio_transcriber = ["py.typed"]
 
-[tool.black]
+[tool.ruff]
 line-length = 100
-target-version = ["py38", "py39", "py310", "py311", "py312"]
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-  \.eggs
-  | \.git
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | build
-  | dist
-  | examples
-)/
-'''
+target-version = "py38"
+src = ["src", "tests"]
 
-[tool.isort]
-profile = "black"
-line_length = 100
-skip_gitignore = true
-known_first_party = ["audio_transcriber"]
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+]
+ignore = ["E203", "E501", "E402", "F401"]
+exclude = [
+    ".git",
+    "__pycache__",
+    ".venv",
+    "venv",
+    "env",
+    "ENV",
+    "build",
+    "dist",
+    "*.egg-info",
+    ".tox",
+    ".eggs",
+    ".pytest_cache",
+    ".mypy_cache",
+    "examples",
+    "docs",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["S101"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
 
 [tool.mypy]
 python_version = "3.8"

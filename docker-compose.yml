@@ -4,7 +4,7 @@ services:
   audio-transcriber:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile
     image: audio-transcriber:latest
     container_name: audio-transcriber
     

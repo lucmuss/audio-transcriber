@@ -112,9 +112,9 @@ class AudioTranscriber:
         """
         validate_segment_params(segment_length, overlap, concurrency, temperature)
 
-        logger.info(f"\n{'='*70}")
+        logger.info(f"\n{'=' * 70}")
         logger.info(f"Processing: {file_path.name}")
-        logger.info(f"{'='*70}")
+        logger.info(f"{'=' * 70}")
 
         # Override model and format if diarization is enabled
         effective_model = self.model
@@ -369,8 +369,7 @@ class AudioTranscriber:
                                     )
                                 else:
                                     segment_filename = (
-                                        f"{file_stem}_segment_{segment_num:03d}."
-                                        f"{response_format}"
+                                        f"{file_stem}_segment_{segment_num:03d}.{response_format}"
                                     )
                                 segment_output_file = output_dir / segment_filename
 
@@ -540,9 +539,9 @@ class AudioTranscriber:
         Returns:
             Dictionary with summary results and metadata
         """
-        logger.info(f"\n{'='*70}")
+        logger.info(f"\n{'=' * 70}")
         logger.info(f"Generating summary for: {transcription_file.name}")
-        logger.info(f"{'='*70}")
+        logger.info(f"{'=' * 70}")
 
         # Check if transcription file exists
         if not transcription_file.exists():

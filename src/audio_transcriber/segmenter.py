@@ -75,7 +75,7 @@ class AudioSegmenter:
 
         logger.info(f"Audio duration: {format_duration(total_duration_seconds)}")
         logger.debug(
-            f"Original format - Sample rate: {audio.frame_rate}Hz, " f"Channels: {audio.channels}"
+            f"Original format - Sample rate: {audio.frame_rate}Hz, Channels: {audio.channels}"
         )
 
         # Calculate segmentation parameters
