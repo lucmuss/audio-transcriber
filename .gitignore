@@ -141,6 +141,7 @@ cython_debug/
 # IDEs
 .vscode/
 .idea/
+.cline/
 *.swp
 *.swo
 *~
