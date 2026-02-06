@@ -207,9 +207,7 @@ def display_file_metadata(gui_instance, file_path: Path):
         channel_desc = (
             "Stereo"
             if audio.channels == 2
-            else "Mono"
-            if audio.channels == 1
-            else f"{audio.channels} Kanäle"
+            else "Mono" if audio.channels == 1 else f"{audio.channels} Kanäle"
         )
         lines.append(f"🔊 Kanäle: {audio.channels} ({channel_desc})")
         lines.append(f"📊 Sample-Rate: {audio.frame_rate} Hz")
@@ -240,10 +238,8 @@ def display_file_metadata(gui_instance, file_path: Path):
         lines.append("=== Transkriptions-Schätzung ===")
         lines.append(f"💰 Geschätzte Kosten: ${cost:.4f}")
         lines.append(
-
-                f"⏱ Geschätzte Dauer: ca. {duration_minutes / 10:.1f} - "
-                f"{duration_minutes / 5:.1f} Minuten"
-
+            f"⏱ Geschätzte Dauer: ca. {duration_minutes / 10:.1f} - "
+            f"{duration_minutes / 5:.1f} Minuten"
         )
         lines.append("   (abhängig von Concurrency und Netzwerk)")
 

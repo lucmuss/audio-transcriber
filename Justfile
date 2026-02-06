@@ -17,6 +17,9 @@ dev:
 format:
     uv run --with black black src tests
 
+# Alias for format
+fmt: format
+
 # Checks code quality (read-only)
 lint:
     uv run ruff check src tests
@@ -41,6 +44,10 @@ binary:
 
 # Full CI pipeline locally
 ci: check build
+
+# Install git hooks
+hooks:
+    uv run --with pre-commit pre-commit install
 
 # Type checking
 typecheck:

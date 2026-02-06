@@ -82,8 +82,10 @@ class TranscriptionMerger:
                 first_current = current_sentences[0].strip().lower()
 
                 # If there's significant overlap, skip the first sentence
-                if last_merged and first_current and self._sentences_similar(
-                    last_merged, first_current
+                if (
+                    last_merged
+                    and first_current
+                    and self._sentences_similar(last_merged, first_current)
                 ):
                     # Skip first sentence, add the rest
                     remaining = " ".join(current_sentences[1:])
