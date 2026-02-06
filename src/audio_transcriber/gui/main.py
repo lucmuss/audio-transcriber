@@ -93,9 +93,7 @@ class AudioTranscriberGUI:
 
         # Summarization
         self.summarize = tk.BooleanVar(value=False)
-        self.summary_dir = tk.StringVar(
-            value=os.getenv(f"{ENV_PREFIX}SUMMARY_DIR", "./summaries")
-        )
+        self.summary_dir = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}SUMMARY_DIR", "./summaries"))
         self.summary_model = tk.StringVar(
             value=os.getenv(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL)
         )
