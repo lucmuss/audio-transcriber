@@ -38,10 +38,12 @@ DEFAULT_DIARIZATION_MODEL = "gpt-4o-transcribe-diarize"
 DEFAULT_DIARIZATION_FORMAT = "diarized_json"
 
 # Summarization defaults
-DEFAULT_SUMMARY_MODEL = "gpt-4.1-mini"
+DEFAULT_SUMMARY_MODEL = "gpt-5-mini"
 DEFAULT_SUMMARY_PROMPT = (
-    "Bitte erstelle eine ausführliche Zusammenfassung des folgenden Transkripts. "
-    "Fokussiere dich auf die wichtigsten Punkte, Themen und Erkenntnisse."
+    "Create a detailed summary of the transcript. Use clear sections: "
+    "Summary, Key Points, Decisions, and Open Questions. Then add a TODO list "
+    "that reads like a meeting protocol: each item must include Task, Owner, "
+    "Due Date, and Status (use Unassigned/No due date mentioned if missing)."
 )
 
 # Pricing (per minute, in USD) - Model-specific rates

@@ -69,9 +69,13 @@ class AudioTranscriberGUI:
         # Transcription
         self.language = tk.StringVar(value="")
         self.detect_language = tk.BooleanVar(value=True)
-        self.temperature = tk.DoubleVar(value=DEFAULT_TEMPERATURE)
-        self.prompt = tk.StringVar(value="")
-        self.response_format = tk.StringVar(value=DEFAULT_RESPONSE_FORMAT)
+        self.temperature = tk.DoubleVar(
+            value=float(os.getenv(f"{ENV_PREFIX}TEMPERATURE", str(DEFAULT_TEMPERATURE)))
+        )
+        self.prompt = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}PROMPT", ""))
+        self.response_format = tk.StringVar(
+            value=os.getenv(f"{ENV_PREFIX}RESPONSE_FORMAT", DEFAULT_RESPONSE_FORMAT)
+        )
 
         # Performance
         self.concurrency = tk.IntVar(value=DEFAULT_CONCURRENCY)
@@ -89,11 +93,15 @@ class AudioTranscriberGUI:
 
         # Summarization
         self.summarize = tk.BooleanVar(value=False)
-        self.summary_dir = tk.StringVar(value="./summaries")
+        self.summary_dir = tk.StringVar(
+            value=os.getenv(f"{ENV_PREFIX}SUMMARY_DIR", "./summaries")
+        )
         self.summary_model = tk.StringVar(
             value=os.getenv(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL)
         )
-        self.summary_prompt = tk.StringVar(value=DEFAULT_SUMMARY_PROMPT)
+        self.summary_prompt = tk.StringVar(
+            value=os.getenv(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT)
+        )
 
         # Export
         self.export_formats: List[str] = []  # List of selected formats

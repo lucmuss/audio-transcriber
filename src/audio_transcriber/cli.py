@@ -125,7 +125,7 @@ For more information: https://github.com/lucmuss/audio-transcriber
         "--response-format",
         type=str,
         choices=list(VALID_RESPONSE_FORMATS),
-        default=DEFAULT_RESPONSE_FORMAT,
+        default=os.getenv(f"{ENV_PREFIX}RESPONSE_FORMAT", DEFAULT_RESPONSE_FORMAT),
         help=f"Output format (default: {DEFAULT_RESPONSE_FORMAT})",
     )
 
@@ -167,13 +167,13 @@ For more information: https://github.com/lucmuss/audio-transcriber
     trans_group.add_argument(
         "--temperature",
         type=float,
-        default=DEFAULT_TEMPERATURE,
+        default=float(os.getenv(f"{ENV_PREFIX}TEMPERATURE", str(DEFAULT_TEMPERATURE))),
         help=f"Model temperature 0.0-1.0 (default: {DEFAULT_TEMPERATURE})",
     )
     trans_group.add_argument(
         "--prompt",
         type=str,
-        default=None,
+        default=os.getenv(f"{ENV_PREFIX}PROMPT"),
         help="Context prompt for better accuracy (e.g., names, technical terms)",
     )
 
@@ -240,7 +240,7 @@ For more information: https://github.com/lucmuss/audio-transcriber
     summary_group.add_argument(
         "--summary-prompt",
         type=str,
-        default=DEFAULT_SUMMARY_PROMPT,
+        default=os.getenv(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT),
         help="Custom prompt for summary generation",
     )
 
