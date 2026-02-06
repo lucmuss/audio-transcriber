@@ -130,7 +130,7 @@ def extract_speakers(diarized_json: str) -> List[str]:
         if speaker:
             speakers.add(speaker)
 
-    return sorted(list(speakers))
+    return sorted(speakers)
 
 
 def get_speaker_statistics(diarized_json: str) -> Dict[str, Any]:

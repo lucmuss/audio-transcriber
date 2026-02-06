@@ -30,6 +30,18 @@ test:
 # Complete quality check (CI simulation)
 check: lint typecheck test
 
+# Build package (CI parity)
+build:
+    uv run --with build python -m build
+    uv run --with twine twine check dist/*
+
+# Build binaries (optional, CI parity)
+binary:
+    uv run --with pyinstaller python build_binary.py
+
+# Full CI pipeline locally
+ci: check build
+
 # Type checking
 typecheck:
     uv run mypy src

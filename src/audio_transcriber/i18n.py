@@ -4,6 +4,7 @@ Internationalization (i18n) module for Audio Transcriber GUI.
 Supports multiple languages with English as fallback.
 """
 
+import contextlib
 from typing import Any, Dict
 
 # Language names with native representation
@@ -527,10 +528,8 @@ class I18n:
 
         # Format with kwargs if provided
         if kwargs:
-            try:
+            with contextlib.suppress(KeyError, ValueError):
                 text = text.format(**kwargs)
-            except (KeyError, ValueError):
-                pass  # Return unformatted if formatting fails
 
         return text
 

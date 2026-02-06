@@ -507,9 +507,10 @@ class TestMain:
         mock_find_files.return_value = [audio_file]
 
         output = StringIO()
-        with patch("sys.argv", ["audio-transcriber", "--input", str(audio_file), "--dry-run"]):
-            with patch("sys.stdout", output):
-                exit_code = main()
+        with patch(
+            "sys.argv", ["audio-transcriber", "--input", str(audio_file), "--dry-run"]
+        ), patch("sys.stdout", output):
+            exit_code = main()
 
         assert exit_code == 0
         result = output.getvalue()
