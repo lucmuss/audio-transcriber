@@ -6,7 +6,7 @@ default:
 # Initializes the project (uv-based)
 setup:
     uv venv
-    uv sync
+    uv sync --extra dev
     cp -n .env.example .env || true
 
 # Starts development environment (fast prototyping)

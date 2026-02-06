@@ -31,7 +31,7 @@ jobs:
       - name: Create venv
         run: uv venv
       - name: Sync dependencies
-        run: uv sync --dev --frozen
+        run: uv sync --extra dev --frozen
       - name: Build binary
         run: uv run --with pyinstaller python build_binary.py
       - name: Upload binary

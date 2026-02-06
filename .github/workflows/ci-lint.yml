@@ -23,7 +23,7 @@ jobs:
       - name: Create venv
         run: uv venv
       - name: Sync dependencies
-        run: uv sync --dev --frozen
+        run: uv sync --extra dev --frozen
       - name: Ruff lint
         run: uv run ruff check src tests
       - name: Black format check
