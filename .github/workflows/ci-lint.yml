@@ -1,0 +1,32 @@
+name: Lint
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    container: python:3.11-slim
+    env:
+      UV_PROJECT_ENVIRONMENT: .venv
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Create venv
+        run: uv venv
+      - name: Sync dependencies
+        run: uv sync --dev --frozen
+      - name: Ruff lint
+        run: uv run ruff check src tests
+      - name: Black format check
+        run: uv run --with black black --check src tests
+      - name: Flake8 lint
+        run: uv run --with flake8 flake8 src tests

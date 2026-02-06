@@ -1,0 +1,41 @@
+name: Binary
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  binary:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11"]
+    env:
+      UV_PROJECT_ENVIRONMENT: .venv
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Create venv
+        run: uv venv
+      - name: Sync dependencies
+        run: uv sync --dev --frozen
+      - name: Build binary
+        run: uv run --with pyinstaller python build_binary.py
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: audio-transcriber-${{ matrix.os }}
+          path: dist/

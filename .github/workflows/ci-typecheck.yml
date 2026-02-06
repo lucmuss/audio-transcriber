@@ -1,0 +1,28 @@
+name: Typecheck
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  typecheck:
+    runs-on: ubuntu-latest
+    container: python:3.11-slim
+    env:
+      UV_PROJECT_ENVIRONMENT: .venv
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+      - name: Create venv
+        run: uv venv
+      - name: Sync dependencies
+        run: uv sync --dev --frozen
+      - name: Type check
+        run: uv run mypy src

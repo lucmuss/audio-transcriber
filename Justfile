@@ -5,6 +5,7 @@ default:
 
 # Initializes the project (uv-based)
 setup:
+    uv venv
     uv sync
     cp -n .env.example .env || true
 
@@ -12,15 +13,15 @@ setup:
 dev:
     bash docker/entrypoint.sh
 
-# Formats code (Ruff)
+# Formats code (Black)
 format:
-    uv run ruff format src tests
-    uv run ruff check --fix src tests
+    uv run --with black black src tests
 
 # Checks code quality (read-only)
 lint:
     uv run ruff check src tests
-    uv run ruff format --check src tests
+    uv run --with black black --check src tests
+    uv run --with flake8 flake8 src tests
 
 # Runs tests
 test:

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Build standalone binary using PyInstaller.
 
@@ -31,8 +32,10 @@ def build_binary():
         import PyInstaller
         print(f"[OK] PyInstaller {PyInstaller.__version__} found")
     except ImportError:
-        print("[INFO] PyInstaller not found. Installing...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
+        print("[ERROR] PyInstaller is required but not installed.")
+        print("[INFO] Install with: uv add --dev pyinstaller")
+        print("[INFO] Or run with: uv run --with pyinstaller python build_binary.py")
+        return 1
     
     # Get version from package
     import audio_transcriber
