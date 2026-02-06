@@ -49,7 +49,7 @@ ffmpeg -version
 
 ---
 
-### Problem: pip install fails
+### Problem: uv sync fails
 
 **Error:**
 ```
@@ -58,19 +58,20 @@ error: metadata-generation-failed
 
 **Solution:**
 
-1. Upgrade pip:
+1. Update uv:
 ```bash
-python -m pip install --upgrade pip
+uv self update
 ```
 
-2. Install build tools:
+2. Recreate venv:
 ```bash
-pip install setuptools wheel
+rm -rf .venv
+uv venv
 ```
 
 3. Try again:
 ```bash
-pip install -e .
+uv sync --extra dev
 ```
 
 ---
@@ -589,10 +590,10 @@ audio-transcriber --input test.mp3 --verbose
 python --version
 
 # Verify packages
-pip list | grep -E "openai|pydub|tqdm"
+uv run python -c "import openai, pydub, tqdm; print('deps ok')"
 
 # Check installation
-pip show audio-transcriber
+uv run python -c "import audio_transcriber; print(audio_transcriber.__version__)"
 ```
 
 ---
@@ -605,10 +606,10 @@ git clone https://github.com/lucmuss/audio-transcriber.git
 cd audio-transcriber
 
 # Install dev dependencies
-pip install -e ".[dev]"
+uv sync --extra dev
 
 # Run tests
-pytest -v
+uv run pytest -v
 ```
 
 ---

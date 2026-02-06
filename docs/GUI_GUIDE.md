@@ -8,7 +8,7 @@ Vollständiger Leitfaden für die grafische Benutzeroberfläche des Audio Transc
 
 ```bash
 # Falls noch nicht installiert
-pip install -e .
+uv sync
 ```
 
 ### GUI Starten

@@ -69,37 +69,35 @@ audio-transcriber/
 │   └── fixtures/                   # Test-Daten
 │
 ├── docs/                           # Erweiterte Dokumentation
-│   ├── USAGE_EXAMPLES.md           # Detaillierte Beispiele
-│   └── TROUBLESHOOTING.md          # Häufige Probleme & Lösungen
+│   ├── QUICKSTART.md               # Schnellstart
+│   ├── TROUBLESHOOTING.md          # Häufige Probleme & Lösungen
+│   └── ...                         # Weitere Guides
 │
 ├── examples/                       # Nutzungsbeispiele
 │   └── EXAMPLES.md
 │
-├── Formula/                        # Homebrew Formula
-│   └── audio-transcriber.rb
+├── docker/                         # Docker Assets
+│   ├── Dockerfile                  # Docker Image Definition
+│   └── entrypoint.sh
 │
 ├── build/                          # Build-Artefakte (gitignored)
 ├── dist/                           # Distribution-Dateien (gitignored)
 │
 ├── .dockerignore                   # Docker Ignore-Patterns
 ├── .gitignore                      # Git Ignore-Patterns
-├── Dockerfile                      # Docker Image Definition
 ├── docker-compose.yml              # Docker Compose Konfiguration
 │
 ├── pyproject.toml                  # Modernes Python Packaging
-├── requirements.txt                # Production Dependencies
+├── uv.lock                         # uv Lockfile
+├── requirements.txt                # Legacy/Docker Dependencies
 │
 ├── mypy.ini                        # Type Checking Konfiguration
-├── .flake8                         # Linting Konfiguration
+├── setup.cfg                       # Linting Konfiguration
 ├── build_binary.py                 # Binary Building Script
 │
 ├── README.md                       # Haupt-Projektdokumentation
-├── CONTRIBUTING.md                 # Contribution Guidelines
 ├── LICENSE                         # Lizenz (MIT)
-├── DOCKER.md                       # Docker Nutzungsguide
-├── PYPI_PUBLISH.md                 # PyPI Publishing Guide
-├── HOMEBREW.md                     # Homebrew Publishing Guide
-└── PROJECT_GUIDELINES.md           # Diese Datei
+└── Rules/                          # Projektregeln
 ```
 
 ### Wichtige Strukturentscheidungen
@@ -495,7 +493,7 @@ git push origin :refs/tags/v1.0.1
 
 1. **PyPI** (Python Package Index)
    - Primäre Methode für Python Packages
-   - `pip install audio-transcriber`
+   - `uv tool install audio-transcriber`
    - Automatisiert via GitHub Actions
 
 2. **Docker** (Containerisiert)
@@ -630,13 +628,18 @@ black . && isort . && flake8 . && mypy src && pytest
 # Multi-stage Build für kleinere Images
 FROM python:3.11-slim as builder
 WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+COPY pyproject.toml uv.lock .
+RUN uv venv && uv sync --frozen
 
 FROM python:3.11-slim
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /app/.venv /app/.venv
 COPY . /app
 WORKDIR /app
+ENV PATH="/app/.venv/bin:$PATH"
 ENTRYPOINT ["audio-transcriber"]
 ```
 

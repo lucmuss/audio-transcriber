@@ -37,11 +37,11 @@ Generate API tokens for secure authentication:
 1. Go to https://test.pypi.org/manage/account/
 2. Follow same steps as above
 
-### 3. Install Build Tools
+### 3. Build Tools (uv)
 
 ```bash
-pip install --upgrade pip
-pip install build twine
+uv run --with build --with twine python -m build
+uv run --with twine twine check dist/*
 ```
 
 ---
@@ -77,7 +77,7 @@ rm -rf build/ dist/ *.egg-info
 ### Step 3: Build Distribution
 
 ```bash
-python -m build
+uv run --with build python -m build
 ```
 
 This creates:
@@ -87,7 +87,7 @@ This creates:
 ### Step 4: Check Distribution
 
 ```bash
-twine check dist/*
+uv run --with twine twine check dist/*
 ```
 
 Should output: `PASSED` for all files.
@@ -95,7 +95,7 @@ Should output: `PASSED` for all files.
 ### Step 5: Upload to TestPyPI (Optional)
 
 ```bash
-twine upload --repository testpypi dist/*
+uv run --with twine twine upload --repository testpypi dist/*
 ```
 
 When prompted, use:
@@ -107,7 +107,7 @@ Verify at: https://test.pypi.org/project/audio-transcriber/
 ### Step 6: Upload to PyPI
 
 ```bash
-twine upload dist/*
+uv run --with twine twine upload dist/*
 ```
 
 When prompted, use:
@@ -118,7 +118,7 @@ When prompted, use:
 
 ```bash
 # Install from PyPI
-pip install audio-transcriber
+uv tool install audio-transcriber
 
 # Verify version
 audio-transcriber --version
@@ -198,9 +198,9 @@ Format: `MAJOR.MINOR.PATCH`
 - [ ] Update `src/audio_transcriber/__init__.py`
 - [ ] Update `pyproject.toml`
 - [ ] Update `CHANGELOG.md` (if exists)
-- [ ] Run all tests: `pytest`
-- [ ] Build locally: `python -m build`
-- [ ] Check build: `twine check dist/*`
+- [ ] Run all tests: `uv run pytest`
+- [ ] Build locally: `uv run --with build python -m build`
+- [ ] Check build: `uv run --with twine twine check dist/*`
 - [ ] Commit changes
 - [ ] Create git tag: `git tag -a v1.0.1 -m "Release 1.0.1"`
 - [ ] Push commits: `git push`
@@ -220,21 +220,20 @@ Format: `MAJOR.MINOR.PATCH`
 
 ```bash
 # Build
-python -m build
+uv run --with build python -m build
 
 # Upload
-twine upload --repository testpypi dist/*
+uv run --with twine twine upload --repository testpypi dist/*
 ```
 
 ### Install from TestPyPI
 
 ```bash
 # Create test environment
-python3 -m venv test-env
-source test-env/bin/activate
+uv venv
 
 # Install from TestPyPI
-pip install --index-url https://test.pypi.org/simple/ \
+uv pip install --index-url https://test.pypi.org/simple/ \
     --extra-index-url https://pypi.org/simple/ \
     audio-transcriber
 
@@ -290,7 +289,7 @@ Invalid or non-existent authentication information
 
 1. **Use `__token__` as username:**
 ```bash
-twine upload dist/* -u __token__ -p pypi-your-token-here
+uv run --with twine twine upload dist/* -u __token__ -p pypi-your-token-here
 ```
 
 2. **Store credentials in `~/.pypirc`:**
@@ -306,7 +305,7 @@ password = pypi-your-testpypi-token
 
 Then upload without prompts:
 ```bash
-twine upload dist/*
+uv run --with twine twine upload dist/*
 ```
 
 ---
@@ -320,8 +319,7 @@ error: invalid command 'bdist_wheel'
 
 **Solution:**
 ```bash
-pip install --upgrade setuptools wheel
-python -m build
+uv run --with build python -m build
 ```
 
 ---
@@ -337,8 +335,7 @@ The description failed to render for the following reason:
 
 1. **Validate README locally:**
 ```bash
-pip install readme-renderer
-python -c "import readme_renderer.rst; print(readme_renderer.rst.render(open('README.md').read()))"
+uv run --with readme-renderer python -c "import readme_renderer.rst; print(readme_renderer.rst.render(open('README.md').read()))"
 ```
 
 2. **Check on TestPyPI first**
@@ -376,17 +373,13 @@ tar -tzf dist/audio-transcriber-1.0.0.tar.gz
 
 ```bash
 # Create clean environment
-python3 -m venv test-venv
-source test-venv/bin/activate
+uv venv
 
 # Install locally
-pip install -e .
+uv sync --extra dev
 
 # Run tests
-pytest
-
-# Deactivate
-deactivate
+uv run pytest
 ```
 
 ### 2. Use TestPyPI for Major Changes
@@ -442,13 +435,13 @@ dependencies = [
 rm -rf build/ dist/ *.egg-info
 
 # 3. Build
-python -m build
+uv run --with build python -m build
 
 # 4. Check
-twine check dist/*
+uv run --with twine twine check dist/*
 
 # 5. Upload
-twine upload dist/*
+uv run --with twine twine upload dist/*
 
 # 6. Tag
 git tag -a v1.0.1 -m "Release 1.0.1"

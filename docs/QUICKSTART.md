@@ -4,20 +4,17 @@ Schnelleste Möglichkeit, um mit Audio Transcriber zu starten!
 
 ## Installation (2 Minuten)
 
-### Option 1: Automatisches Setup-Skript (empfohlen) ⭐
+### Option 1: Justfile Setup (empfohlen) ⭐
 
 ```bash
 # 1. Klone das Repository
 git clone https://github.com/lucmuss/audio-transcriber.git
 cd audio-transcriber
 
-# 2. Führe das Setup-Skript aus
-bash setup.sh
+# 2. Führe das Setup aus
+just setup
 
-# 3. Aktiviere das Virtual Environment
-source venv/bin/activate
-
-# 4. Done! ✓
+# 3. Done! ✓
 ```
 
 ### Option 2: Manuelles Setup
@@ -27,12 +24,10 @@ git clone https://github.com/lucmuss/audio-transcriber.git
 cd audio-transcriber
 
 # Virtual Environment erstellen
-python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
-# oder auf Windows: venv\Scripts\activate
+uv venv
 
 # Abhängigkeiten installieren
-pip install -r requirements.txt
+uv sync
 ```
 
 ## Erste Schritte
@@ -86,32 +81,20 @@ Die GUI bietet alle Features mit einer benutzerfreundlichen Oberfläche!
 
 ### ❌ "ModuleNotFoundError: No module named 'pydub'"
 
-**Lösung:** Virtual Environment nicht aktiviert!
+**Lösung:** Abhängigkeiten installieren oder über uv ausführen.
 
 ```bash
-source venv/bin/activate  # Linux/macOS
-# oder
-venv\Scripts\activate     # Windows
-```
-
-Dann erneut versuchen:
-```bash
-audio-transcriber --input ...
+uv sync
+uv run audio-transcriber --input ...
 ```
 
 ### ❌ "externally-managed-environment"
 
-**Lösung:** Virtual Environment nicht aktiviert oder erstellt nicht richtig!
+**Lösung:** uv venv nutzen und Abhängigkeiten sauber installieren.
 
 ```bash
-# Neues venv erstellen
-python3 -m venv venv_new
-
-# Aktivieren
-source venv_new/bin/activate
-
-# Dependencies installieren
-pip install -r requirements.txt
+uv venv
+uv sync
 ```
 
 ### ❌ "ffmpeg not found"

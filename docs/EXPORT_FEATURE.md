@@ -15,7 +15,7 @@ Alle Exporte unterstützen Metadaten wie Titel, Autor, Datum, Dauer und Sprache.
 ### Basis-Installation
 
 ```bash
-pip install python-docx  # Nur für DOCX-Export erforderlich
+uv add python-docx  # Nur für DOCX-Export erforderlich
 ```
 
 ### LaTeX zu PDF (Optional)
@@ -336,7 +336,7 @@ python-docx package not installed
 
 **Lösung:**
 ```bash
-pip install python-docx
+uv add python-docx
 ```
 
 ### LaTeX Sonderzeichen-Probleme

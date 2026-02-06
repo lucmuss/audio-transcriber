@@ -41,14 +41,13 @@ git clone https://github.com/YOUR_USERNAME/audio-transcriber.git
 cd audio-transcriber
 
 # Create a virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+uv venv
 
 # Install in development mode with dev dependencies
-pip install -e ".[dev]"
+uv sync --extra dev
 
 # Install pre-commit hooks
-pre-commit install
+uv run --with pre-commit pre-commit install
 ```
 
 ## Making Changes
