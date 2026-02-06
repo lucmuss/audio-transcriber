@@ -433,7 +433,7 @@ class AudioTranscriber:
         while retry_count < max_retries:
             try:
                 with open(segment_file, "rb") as f:
-                    kwargs = {
+                    kwargs: Dict[str, Any] = {
                         "model": effective_model,
                         "file": f,
                         "response_format": response_format,

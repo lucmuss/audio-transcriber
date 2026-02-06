@@ -28,6 +28,7 @@ lint:
 
 # Runs tests
 test:
+    uv sync --extra dev
     uv run pytest
 
 # Complete quality check (CI simulation)
