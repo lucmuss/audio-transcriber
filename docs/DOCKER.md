@@ -137,7 +137,7 @@ docker-compose run audio-transcriber
 
 # Transcribe a file
 docker-compose run audio-transcriber \
-  --input /app/input/podcast.mp3
+  audio-transcriber --input /app/input/podcast.mp3
 ```
 
 ### Custom docker-compose.yml
@@ -153,7 +153,7 @@ services:
     volumes:
       - ./my_audio:/app/input:ro
       - ./my_transcriptions:/app/output
-    command: ["--input", "/app/input", "--verbose"]
+    command: ["audio-transcriber", "--input", "/app/input", "--verbose"]
 ```
 
 ### Run in Background

@@ -114,36 +114,34 @@ Testet die Command-Line Interface:
 ### Voraussetzungen
 
 ```bash
-# Virtual Environment erstellen
-python3 -m venv venv
-source venv/bin/activate  # Linux/macOS
-# oder
-venv\Scripts\activate  # Windows
+# Virtual Environment + Dependencies (uv)
+uv venv
+uv sync --extra dev
 
-# Projekt mit Test-Abhängigkeiten installieren
-pip install -e ".[dev]"
+# Tests starten
+uv run pytest
 ```
 
 ### Tests ausführen
 
 ```bash
 # Alle Tests
-pytest
+uv run pytest
 
 # Mit Coverage
-pytest --cov=audio_transcriber --cov-report=html
+uv run pytest --cov=audio_transcriber --cov-report=html
 
 # Verbose
-pytest -v
+uv run pytest -v
 
 # Specific Test-Datei
-pytest tests/test_segmenter.py
+uv run pytest tests/test_segmenter.py
 
 # Stop bei erstem Fehler
-pytest -x
+uv run pytest -x
 
 # Nur bestimmte Marker
-pytest -m unit
+uv run pytest -m unit
 ```
 
 ## Konfiguration

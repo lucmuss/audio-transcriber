@@ -3,7 +3,6 @@ Command-line interface for Audio Transcriber.
 """
 
 import argparse
-import os
 import sys
 from pathlib import Path
 from typing import List
@@ -24,6 +23,7 @@ from .constants import (
     get_model_price_per_minute,
 )
 from .exporter import TranscriptionExporter
+from .env import env_float, env_int, env_str
 from .progress import ProgressTracker
 from .transcriber import AudioTranscriber
 from .utils import estimate_cost, find_audio_files, format_duration, setup_logging
@@ -89,19 +89,19 @@ For more information: https://github.com/lucmuss/audio-transcriber
     api_group.add_argument(
         "--api-key",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}API_KEY"),
+        default=env_str(f"{ENV_PREFIX}API_KEY"),
         help=f"API key (or ${ENV_PREFIX}API_KEY env var)",
     )
     api_group.add_argument(
         "--base-url",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}BASE_URL", DEFAULT_BASE_URL),
+        default=env_str(f"{ENV_PREFIX}BASE_URL", DEFAULT_BASE_URL),
         help=f"API base URL (default: {DEFAULT_BASE_URL})",
     )
     api_group.add_argument(
         "--model",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}MODEL", DEFAULT_MODEL),
+        default=env_str(f"{ENV_PREFIX}MODEL", DEFAULT_MODEL),
         help=f"Model name (default: {DEFAULT_MODEL})",
     )
 
@@ -111,13 +111,13 @@ For more information: https://github.com/lucmuss/audio-transcriber
         "-o",
         "--output-dir",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}OUTPUT_DIR", "./transcriptions"),
+        default=env_str(f"{ENV_PREFIX}OUTPUT_DIR", "./transcriptions"),
         help="Output directory for final transcriptions (default: ./transcriptions)",
     )
     output_group.add_argument(
         "--segments-dir",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}SEGMENTS_DIR", "./segments"),
+        default=env_str(f"{ENV_PREFIX}SEGMENTS_DIR", "./segments"),
         help="Output directory for temporary segments (default: ./segments)",
     )
     output_group.add_argument(
@@ -125,7 +125,7 @@ For more information: https://github.com/lucmuss/audio-transcriber
         "--response-format",
         type=str,
         choices=list(VALID_RESPONSE_FORMATS),
-        default=os.getenv(f"{ENV_PREFIX}RESPONSE_FORMAT", DEFAULT_RESPONSE_FORMAT),
+        default=env_str(f"{ENV_PREFIX}RESPONSE_FORMAT", DEFAULT_RESPONSE_FORMAT),
         help=f"Output format (default: {DEFAULT_RESPONSE_FORMAT})",
     )
 
@@ -134,13 +134,13 @@ For more information: https://github.com/lucmuss/audio-transcriber
     segment_group.add_argument(
         "--segment-length",
         type=int,
-        default=int(os.getenv(f"{ENV_PREFIX}SEGMENT_LENGTH", str(DEFAULT_SEGMENT_LENGTH))),
+        default=env_int(f"{ENV_PREFIX}SEGMENT_LENGTH", DEFAULT_SEGMENT_LENGTH),
         help=f"Segment length in seconds (default: {DEFAULT_SEGMENT_LENGTH})",
     )
     segment_group.add_argument(
         "--overlap",
         type=int,
-        default=int(os.getenv(f"{ENV_PREFIX}OVERLAP", str(DEFAULT_OVERLAP))),
+        default=env_int(f"{ENV_PREFIX}OVERLAP", DEFAULT_OVERLAP),
         help=f"Overlap between segments in seconds (default: {DEFAULT_OVERLAP})",
     )
 
@@ -167,13 +167,13 @@ For more information: https://github.com/lucmuss/audio-transcriber
     trans_group.add_argument(
         "--temperature",
         type=float,
-        default=float(os.getenv(f"{ENV_PREFIX}TEMPERATURE", str(DEFAULT_TEMPERATURE))),
+        default=env_float(f"{ENV_PREFIX}TEMPERATURE", DEFAULT_TEMPERATURE),
         help=f"Model temperature 0.0-1.0 (default: {DEFAULT_TEMPERATURE})",
     )
     trans_group.add_argument(
         "--prompt",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}PROMPT"),
+        default=env_str(f"{ENV_PREFIX}PROMPT"),
         help="Context prompt for better accuracy (e.g., names, technical terms)",
     )
 
@@ -183,7 +183,7 @@ For more information: https://github.com/lucmuss/audio-transcriber
         "-c",
         "--concurrency",
         type=int,
-        default=int(os.getenv(f"{ENV_PREFIX}CONCURRENCY", str(DEFAULT_CONCURRENCY))),
+        default=env_int(f"{ENV_PREFIX}CONCURRENCY", DEFAULT_CONCURRENCY),
         help=f"Number of parallel transcriptions (default: {DEFAULT_CONCURRENCY})",
     )
 
@@ -228,19 +228,19 @@ For more information: https://github.com/lucmuss/audio-transcriber
     summary_group.add_argument(
         "--summary-dir",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}SUMMARY_DIR", "./summaries"),
+        default=env_str(f"{ENV_PREFIX}SUMMARY_DIR", "./summaries"),
         help="Output directory for summaries (default: ./summaries)",
     )
     summary_group.add_argument(
         "--summary-model",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL),
+        default=env_str(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL),
         help=f"Model for summarization (default: {DEFAULT_SUMMARY_MODEL})",
     )
     summary_group.add_argument(
         "--summary-prompt",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT),
+        default=env_str(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT),
         help="Custom prompt for summary generation",
     )
 
@@ -256,7 +256,7 @@ For more information: https://github.com/lucmuss/audio-transcriber
     export_group.add_argument(
         "--export-dir",
         type=str,
-        default=os.getenv(f"{ENV_PREFIX}EXPORT_DIR", "./exports"),
+        default=env_str(f"{ENV_PREFIX}EXPORT_DIR", "./exports"),
         help="Output directory for exports (default: ./exports)",
     )
     export_group.add_argument(

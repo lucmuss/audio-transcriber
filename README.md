@@ -110,7 +110,7 @@ Die GUI bietet:
 - 📊 **Live-Fortschritt** - Echtzeit-Log-Ausgabe während der Verarbeitung
 - 🎯 **Tooltips & Hilfe** - Provider-Beispiele und Tipps direkt in der GUI
 
-Siehe [GUI_GUIDE.md](GUI_GUIDE.md) für detaillierte Anleitungen.
+Siehe [GUI Guide](docs/GUI_GUIDE.md) für detaillierte Anleitungen.
 
 ## 📚 Usage Examples
 
@@ -424,7 +424,7 @@ uv run pre-commit install
 ### Development Workflow
 
 ```bash
-# Start development environment (runs docker/entrypoint.sh)
+# Run bootstrap steps for local development
 just dev
 
 # Format and fix code
@@ -489,7 +489,7 @@ uv run mypy src
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please see [Contributing Guide](docs/CONTRIBUTING.md) for guidelines.
 
 ### Quick Contribution Steps
 

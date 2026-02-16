@@ -668,7 +668,7 @@ These examples cover:
 
 For more help, see:
 - [README.md](../README.md) - Main documentation
-- [QUICKSTART.md](../QUICKSTART.md) - Quick start guide
-- [GUI_GUIDE.md](../GUI_GUIDE.md) - GUI usage instructions
+- [QUICKSTART.md](./QUICKSTART.md) - Quick start guide
+- [GUI_GUIDE.md](./GUI_GUIDE.md) - GUI usage instructions
 - [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) - Common issues
 - [GitHub Issues](https://github.com/lucmuss/audio-transcriber/issues) - Report problems

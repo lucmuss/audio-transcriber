@@ -2,7 +2,6 @@
 Main GUI application for Audio Transcriber.
 """
 
-import os
 import threading
 import tkinter as tk
 from datetime import datetime
@@ -24,6 +23,7 @@ from ..constants import (
     ENV_PREFIX,
     get_model_price_per_minute,
 )
+from ..env import env_float, env_int, env_str
 from ..progress import ProgressTracker
 from ..transcriber import AudioTranscriber
 from ..utils import find_audio_files, format_duration, setup_logging
@@ -58,27 +58,29 @@ class AudioTranscriberGUI:
         self.segments_dir = tk.StringVar(value="./segments")
 
         # API Configuration
-        self.api_key = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}API_KEY", ""))
-        self.base_url = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}BASE_URL", DEFAULT_BASE_URL))
-        self.model = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}MODEL", DEFAULT_MODEL))
+        self.api_key = tk.StringVar(value=env_str(f"{ENV_PREFIX}API_KEY", "") or "")
+        self.base_url = tk.StringVar(value=env_str(f"{ENV_PREFIX}BASE_URL", DEFAULT_BASE_URL) or "")
+        self.model = tk.StringVar(value=env_str(f"{ENV_PREFIX}MODEL", DEFAULT_MODEL) or "")
 
         # Segmentation
-        self.segment_length = tk.IntVar(value=DEFAULT_SEGMENT_LENGTH)
-        self.overlap = tk.IntVar(value=DEFAULT_OVERLAP)
+        self.segment_length = tk.IntVar(
+            value=env_int(f"{ENV_PREFIX}SEGMENT_LENGTH", DEFAULT_SEGMENT_LENGTH)
+        )
+        self.overlap = tk.IntVar(value=env_int(f"{ENV_PREFIX}OVERLAP", DEFAULT_OVERLAP))
 
         # Transcription
         self.language = tk.StringVar(value="")
         self.detect_language = tk.BooleanVar(value=True)
         self.temperature = tk.DoubleVar(
-            value=float(os.getenv(f"{ENV_PREFIX}TEMPERATURE", str(DEFAULT_TEMPERATURE)))
+            value=env_float(f"{ENV_PREFIX}TEMPERATURE", DEFAULT_TEMPERATURE)
         )
-        self.prompt = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}PROMPT", ""))
+        self.prompt = tk.StringVar(value=env_str(f"{ENV_PREFIX}PROMPT", "") or "")
         self.response_format = tk.StringVar(
-            value=os.getenv(f"{ENV_PREFIX}RESPONSE_FORMAT", DEFAULT_RESPONSE_FORMAT)
+            value=env_str(f"{ENV_PREFIX}RESPONSE_FORMAT", DEFAULT_RESPONSE_FORMAT) or ""
         )
 
         # Performance
-        self.concurrency = tk.IntVar(value=DEFAULT_CONCURRENCY)
+        self.concurrency = tk.IntVar(value=env_int(f"{ENV_PREFIX}CONCURRENCY", DEFAULT_CONCURRENCY))
 
         # Behavior - UPDATED DEFAULTS to match constants
         self.keep_segments = tk.BooleanVar(value=True)  # Changed from False to True
@@ -93,17 +95,19 @@ class AudioTranscriberGUI:
 
         # Summarization
         self.summarize = tk.BooleanVar(value=False)
-        self.summary_dir = tk.StringVar(value=os.getenv(f"{ENV_PREFIX}SUMMARY_DIR", "./summaries"))
+        self.summary_dir = tk.StringVar(
+            value=env_str(f"{ENV_PREFIX}SUMMARY_DIR", "./summaries") or ""
+        )
         self.summary_model = tk.StringVar(
-            value=os.getenv(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL)
+            value=env_str(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL) or ""
         )
         self.summary_prompt = tk.StringVar(
-            value=os.getenv(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT)
+            value=env_str(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT) or ""
         )
 
         # Export
         self.export_formats: List[str] = []  # List of selected formats
-        self.export_dir = tk.StringVar(value="./exports")
+        self.export_dir = tk.StringVar(value=env_str(f"{ENV_PREFIX}EXPORT_DIR", "./exports") or "")
         self.export_title = tk.StringVar(value="")
         self.export_author = tk.StringVar(value="")
         # Export format checkboxes (will be set by create_export_tab)

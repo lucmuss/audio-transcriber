@@ -11,7 +11,7 @@ setup:
 
 # Starts development environment (fast prototyping)
 dev:
-    bash docker/entrypoint.sh
+    ./scripts/bootstrap.sh full
 
 # Formats code (Black)
 format:
@@ -41,7 +41,7 @@ build:
 
 # Build binaries (optional, CI parity)
 binary:
-    uv run --with pyinstaller python build_binary.py
+    uv run --with pyinstaller python scripts/build_binary.py
 
 # Full CI pipeline locally
 ci: check build
@@ -53,6 +53,10 @@ hooks:
 # Type checking
 typecheck:
     uv run mypy src
+
+# Execute bootstrap steps directly (full, load_env, prepare_directories, run_tests, show_dev_info)
+bootstrap STEP="full":
+    ./scripts/bootstrap.sh {{STEP}}
 
 # Starts Docker containers (deployment testing)
 docker-up:

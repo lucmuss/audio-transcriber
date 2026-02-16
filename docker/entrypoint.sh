@@ -1,15 +1,17 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BOOTSTRAP_SCRIPT="${PROJECT_ROOT}/scripts/bootstrap.sh"
 
 echo "Starting Audio Transcriber container..."
 
-# Run tests after "migrations" (there are no migrations, but run tests for quality assurance)
-if [ "$RUN_TESTS" = "true" ]; then
-    echo "Running tests..."
-    python -m pytest tests/ -v --tb=short
-    echo "Tests passed."
+if [[ -x "${BOOTSTRAP_SCRIPT}" ]]; then
+    "${BOOTSTRAP_SCRIPT}" full
 fi
 
-# For development, you might want to start a shell or run the app
-# For production, this could be the entry point for the CLI
+if [[ "$#" -eq 0 ]]; then
+    set -- audio-transcriber --help
+fi
+
 exec "$@"

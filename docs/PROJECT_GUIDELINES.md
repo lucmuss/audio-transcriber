@@ -93,7 +93,9 @@ audio-transcriber/
 │
 ├── mypy.ini                        # Type Checking Konfiguration
 ├── setup.cfg                       # Linting Konfiguration
-├── build_binary.py                 # Binary Building Script
+├── scripts/
+│   ├── bootstrap.sh                # Zentraler Bootstrap
+│   └── build_binary.py             # Binary Building Script
 │
 ├── README.md                       # Haupt-Projektdokumentation
 ├── LICENSE                         # Lizenz (MIT)
@@ -133,9 +135,9 @@ README.md                     # High-Level Übersicht, Quick Start
 docs/                         # Detaillierte Guides
   ├── USAGE_EXAMPLES.md
   └── TROUBLESHOOTING.md
-CONTRIBUTING.md               # Wie man beiträgt
-DOCKER.md                     # Docker-spezifischer Guide
-PYPI_PUBLISH.md               # Publishing Guide
+docs/CONTRIBUTING.md          # Wie man beiträgt
+docs/DOCKER.md                # Docker-spezifischer Guide
+docs/PYPI_PUBLISH.md          # Publishing Guide
 ```
 
 **Warum?**

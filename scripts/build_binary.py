@@ -7,19 +7,10 @@ This script creates a single executable file for audio-transcriber
 that can be distributed without requiring Python installation.
 """
 
-import os
-import sys
 import platform
 import subprocess
+import sys
 from pathlib import Path
-
-
-def get_platform_name():
-    """Get platform-specific naming."""
-    system = platform.system().lower()
-    if system == "darwin":
-        return "macos"
-    return system
 
 
 def build_binary():
@@ -34,7 +25,7 @@ def build_binary():
     except ImportError:
         print("[ERROR] PyInstaller is required but not installed.")
         print("[INFO] Install with: uv add --dev pyinstaller")
-        print("[INFO] Or run with: uv run --with pyinstaller python build_binary.py")
+        print("[INFO] Or run with: uv run --with pyinstaller python scripts/build_binary.py")
         return 1
     
     # Get version from package

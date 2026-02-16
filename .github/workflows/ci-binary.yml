@@ -13,7 +13,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11"]
+        python-version: ["3.12"]
     env:
       UV_PROJECT_ENVIRONMENT: .venv
     steps:
@@ -33,7 +33,7 @@ jobs:
       - name: Sync dependencies
         run: uv sync --extra dev --frozen
       - name: Build binary
-        run: uv run --with pyinstaller python build_binary.py
+        run: uv run --with pyinstaller python scripts/build_binary.py
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:

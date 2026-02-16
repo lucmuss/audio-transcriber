@@ -98,11 +98,11 @@ class TranscriptionExporter:
             from docx.enum.text import WD_ALIGN_PARAGRAPH
             from docx.shared import Pt
         except ImportError:
-            logger.error("python-docx not installed. Run: pip install python-docx")
+            logger.error("python-docx not installed. Run: uv add python-docx")
             return {
                 "status": "error",
                 "error": "python-docx package not installed",
-                "suggestion": "pip install python-docx",
+                "suggestion": "uv add python-docx",
             }
 
         try:
@@ -157,7 +157,7 @@ class TranscriptionExporter:
             output_file.parent.mkdir(parents=True, exist_ok=True)
 
             # Save document
-            doc.save(output_file)
+            doc.save(str(output_file))
 
             logger.info(f"Exported to DOCX: {output_file.name}")
 
