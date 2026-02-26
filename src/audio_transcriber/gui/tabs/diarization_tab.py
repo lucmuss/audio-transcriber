@@ -1,99 +1,95 @@
-"""
-Speaker diarization tab.
-"""
+"""Speaker diarization tab (PySide6)."""
 
-import tkinter as tk
-import tkinter.simpledialog
 from pathlib import Path
-from tkinter import filedialog, ttk
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QFileDialog,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QListWidget,
+    QListWidgetItem,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 
-def create_diarization_tab(parent: ttk.Frame, gui_instance):
+AUDIO_FILTER = "Audio Files (*.mp3 *.wav *.m4a *.flac *.ogg);;All Files (*)"
+
+
+def create_diarization_tab(gui_instance) -> QWidget:
     """Create speaker diarization tab."""
-    # Enable Diarization
-    enable_frame = ttk.Frame(parent)
-    enable_frame.pack(fill=tk.X, padx=10, pady=10)
+    tab = QWidget()
+    layout = QVBoxLayout(tab)
+    layout.setContentsMargins(8, 8, 8, 8)
+    layout.setSpacing(8)
 
-    ttk.Checkbutton(
-        enable_frame,
-        text="Enable Speaker Diarization (Automatically uses gpt-4o-transcribe-diarize model)",
-        variable=gui_instance.enable_diarization,
-    ).pack(anchor=tk.W)
-
-    # Diarization Settings Frame
-    settings_frame = ttk.LabelFrame(parent, text="Diarization Settings", padding=10)
-    settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-    # Number of Speakers
-    ttk.Label(settings_frame, text="Number of Speakers:").grid(row=0, column=0, sticky=tk.W, pady=5)
-    ttk.Spinbox(
-        settings_frame, from_=1, to=20, textvariable=gui_instance.num_speakers, width=10
-    ).grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
-    ttk.Label(settings_frame, text="(Optional: leave for auto-detection)", font=("", 9)).grid(
-        row=0, column=2, sticky=tk.W, padx=5
+    enable_row = QHBoxLayout()
+    gui_instance.enable_diarization_check = QCheckBox(
+        "Enable Speaker Diarization (Automatically uses gpt-4o-transcribe-diarize model)"
     )
+    gui_instance.enable_diarization_check.setChecked(gui_instance.enable_diarization_default)
+    enable_row.addWidget(gui_instance.enable_diarization_check)
+    enable_row.addStretch(1)
+    layout.addLayout(enable_row)
 
-    # Known Speaker Names
-    ttk.Label(settings_frame, text="Known Speaker Names:").grid(
-        row=1, column=0, sticky=tk.NW, pady=5
-    )
+    settings_group = QGroupBox("Diarization Settings")
+    settings_layout = QGridLayout(settings_group)
 
-    names_frame = ttk.Frame(settings_frame)
-    names_frame.grid(row=1, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
+    settings_layout.addWidget(QLabel("Number of Speakers:"), 0, 0)
+    gui_instance.num_speakers_spin = QSpinBox()
+    gui_instance.num_speakers_spin.setRange(1, 20)
+    gui_instance.num_speakers_spin.setValue(gui_instance.num_speakers_default)
+    settings_layout.addWidget(gui_instance.num_speakers_spin, 0, 1, alignment=Qt.AlignLeft)
 
-    gui_instance.speaker_names_list = tk.Listbox(names_frame, height=4, width=40)
-    gui_instance.speaker_names_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    speaker_hint = QLabel("(Optional: leave for auto-detection)")
+    speaker_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
+    settings_layout.addWidget(speaker_hint, 0, 2)
 
-    names_scrollbar = ttk.Scrollbar(
-        names_frame, orient=tk.VERTICAL, command=gui_instance.speaker_names_list.yview
-    )
-    gui_instance.speaker_names_list.configure(yscrollcommand=names_scrollbar.set)
-    names_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    settings_layout.addWidget(QLabel("Known Speaker Names:"), 1, 0, alignment=Qt.AlignTop)
+    gui_instance.speaker_names_list = QListWidget()
+    gui_instance.speaker_names_list.setMinimumHeight(100)
+    settings_layout.addWidget(gui_instance.speaker_names_list, 1, 1, 1, 2)
 
-    names_btn_frame = ttk.Frame(settings_frame)
-    names_btn_frame.grid(row=2, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
+    names_buttons = QHBoxLayout()
+    add_name_btn = QPushButton("Add Name")
+    add_name_btn.clicked.connect(lambda: add_speaker_name(gui_instance))
+    names_buttons.addWidget(add_name_btn)
 
-    ttk.Button(
-        names_btn_frame, text="Add Name", command=lambda: add_speaker_name(gui_instance)
-    ).pack(side=tk.LEFT, padx=2)
-    ttk.Button(
-        names_btn_frame, text="Remove Selected", command=lambda: remove_speaker_name(gui_instance)
-    ).pack(side=tk.LEFT, padx=2)
+    remove_name_btn = QPushButton("Remove Selected")
+    remove_name_btn.clicked.connect(lambda: remove_speaker_name(gui_instance))
+    names_buttons.addWidget(remove_name_btn)
+    names_buttons.addStretch(1)
+    settings_layout.addLayout(names_buttons, 2, 1, 1, 2)
 
-    # Known Speaker References (Audio Files)
-    ttk.Label(settings_frame, text="Reference Audio Files:").grid(
-        row=3, column=0, sticky=tk.NW, pady=5
-    )
+    settings_layout.addWidget(QLabel("Reference Audio Files:"), 3, 0, alignment=Qt.AlignTop)
+    gui_instance.speaker_refs_list = QListWidget()
+    gui_instance.speaker_refs_list.setMinimumHeight(100)
+    settings_layout.addWidget(gui_instance.speaker_refs_list, 3, 1, 1, 2)
 
-    refs_frame = ttk.Frame(settings_frame)
-    refs_frame.grid(row=3, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
+    refs_buttons = QHBoxLayout()
+    add_ref_btn = QPushButton("Add Audio File")
+    add_ref_btn.clicked.connect(lambda: add_speaker_reference(gui_instance))
+    refs_buttons.addWidget(add_ref_btn)
 
-    gui_instance.speaker_refs_list = tk.Listbox(refs_frame, height=4, width=40)
-    gui_instance.speaker_refs_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+    remove_ref_btn = QPushButton("Remove Selected")
+    remove_ref_btn.clicked.connect(lambda: remove_speaker_reference(gui_instance))
+    refs_buttons.addWidget(remove_ref_btn)
+    refs_buttons.addStretch(1)
+    settings_layout.addLayout(refs_buttons, 4, 1, 1, 2)
 
-    refs_scrollbar = ttk.Scrollbar(
-        refs_frame, orient=tk.VERTICAL, command=gui_instance.speaker_refs_list.yview
-    )
-    gui_instance.speaker_refs_list.configure(yscrollcommand=refs_scrollbar.set)
-    refs_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    layout.addWidget(settings_group)
 
-    refs_btn_frame = ttk.Frame(settings_frame)
-    refs_btn_frame.grid(row=4, column=1, columnspan=2, sticky=tk.W, padx=5, pady=5)
-
-    ttk.Button(
-        refs_btn_frame, text="Add Audio File", command=lambda: add_speaker_reference(gui_instance)
-    ).pack(side=tk.LEFT, padx=2)
-    ttk.Button(
-        refs_btn_frame,
-        text="Remove Selected",
-        command=lambda: remove_speaker_reference(gui_instance),
-    ).pack(side=tk.LEFT, padx=2)
-
-    # Info Frame
-    info_frame = ttk.LabelFrame(parent, text="Information", padding=10)
-    info_frame.pack(fill=tk.X, padx=10, pady=10)
-
-    info_text = """Speaker Diarization identifies different speakers in the audio.
+    info_group = QGroupBox("Information")
+    info_layout = QVBoxLayout(info_group)
+    info_label = QLabel(
+        """Speaker Diarization identifies different speakers in the audio.
 
 Options:
 • Number of Speakers: Expected speaker count (auto-detected if not set)
@@ -101,44 +97,47 @@ Options:
 • Reference Audio: Audio samples of known speakers for better identification
 
 Note: Diarization requires specific models and may incur additional costs."""
+    )
+    info_label.setWordWrap(True)
+    info_layout.addWidget(info_label)
+    layout.addWidget(info_group)
 
-    ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(anchor=tk.W)
+    layout.addStretch(1)
+    return tab
 
 
 def add_speaker_name(gui_instance):
     """Add a speaker name to the list."""
-    name = tk.simpledialog.askstring("Add Speaker", "Enter speaker name:")
-    if name and name.strip():
-        gui_instance.speaker_names_list.insert(tk.END, name.strip())
-        gui_instance.known_speaker_names.append(name.strip())
+    name, ok = QInputDialog.getText(gui_instance, "Add Speaker", "Enter speaker name:")
+    if ok and name.strip():
+        clean = name.strip()
+        gui_instance.speaker_names_list.addItem(clean)
+        gui_instance.known_speaker_names.append(clean)
 
 
 def remove_speaker_name(gui_instance):
     """Remove selected speaker name."""
-    selection = gui_instance.speaker_names_list.curselection()
-    if selection:
-        index = selection[0]
-        gui_instance.speaker_names_list.delete(index)
-        if index < len(gui_instance.known_speaker_names):
-            gui_instance.known_speaker_names.pop(index)
+    row = gui_instance.speaker_names_list.currentRow()
+    if row >= 0:
+        gui_instance.speaker_names_list.takeItem(row)
+        if row < len(gui_instance.known_speaker_names):
+            gui_instance.known_speaker_names.pop(row)
 
 
 def add_speaker_reference(gui_instance):
     """Add a reference audio file."""
-    filename = filedialog.askopenfilename(
-        title="Select Reference Audio",
-        filetypes=[("Audio Files", "*.mp3 *.wav *.m4a *.flac *.ogg"), ("All Files", "*.*")],
-    )
+    filename, _ = QFileDialog.getOpenFileName(gui_instance, "Select Reference Audio", "", AUDIO_FILTER)
     if filename:
-        gui_instance.speaker_refs_list.insert(tk.END, Path(filename).name)
+        item = QListWidgetItem(Path(filename).name)
+        item.setData(Qt.UserRole, filename)
+        gui_instance.speaker_refs_list.addItem(item)
         gui_instance.known_speaker_references.append(filename)
 
 
 def remove_speaker_reference(gui_instance):
     """Remove selected reference audio."""
-    selection = gui_instance.speaker_refs_list.curselection()
-    if selection:
-        index = selection[0]
-        gui_instance.speaker_refs_list.delete(index)
-        if index < len(gui_instance.known_speaker_references):
-            gui_instance.known_speaker_references.pop(index)
+    row = gui_instance.speaker_refs_list.currentRow()
+    if row >= 0:
+        gui_instance.speaker_refs_list.takeItem(row)
+        if row < len(gui_instance.known_speaker_references):
+            gui_instance.known_speaker_references.pop(row)

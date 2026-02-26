@@ -1,83 +1,99 @@
-"""
-Progress and control widgets.
-"""
+"""Progress and control widgets for the PySide6 GUI."""
 
-import tkinter as tk
-from tkinter import scrolledtext, ttk
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPlainTextEdit,
+    QProgressBar,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 
-def create_progress_section(parent: tk.Misc, gui_instance) -> tuple:
+def create_progress_section(gui_instance) -> tuple:
     """
     Create bottom section with progress display and control buttons.
 
     Returns:
-        Tuple of (progress_bar, progress_label, eta_label, throughput_label, cost_label, log_text,
-                  start_button, stop_button)
+        Tuple of (container, progress_bar, progress_label, eta_label, throughput_label,
+        cost_label, log_text, start_button, stop_button)
     """
-    bottom_frame = ttk.Frame(parent)
-    bottom_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    container = QWidget()
+    root_layout = QVBoxLayout(container)
+    root_layout.setContentsMargins(0, 0, 0, 0)
+    root_layout.setSpacing(8)
 
-    # Progress Section
-    progress_frame = ttk.LabelFrame(bottom_frame, text="Progress", padding=10)
-    progress_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+    progress_group = QGroupBox("Progress")
+    progress_layout = QVBoxLayout(progress_group)
+    progress_layout.setSpacing(8)
 
-    # Progress bar with percentage
-    progress_bar_frame = ttk.Frame(progress_frame)
-    progress_bar_frame.pack(fill=tk.X, pady=(0, 10))
+    progress_row = QHBoxLayout()
+    progress_bar = QProgressBar()
+    progress_bar.setRange(0, 100)
+    progress_bar.setValue(0)
+    progress_bar.setTextVisible(False)
+    progress_row.addWidget(progress_bar, stretch=1)
 
-    progress_bar = ttk.Progressbar(
-        progress_bar_frame, orient="horizontal", length=400, mode="determinate"
-    )
-    progress_bar.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
+    progress_label = QLabel("0%")
+    progress_label.setMinimumWidth(60)
+    progress_row.addWidget(progress_label)
 
-    progress_label = ttk.Label(progress_bar_frame, text="0%", width=10)
-    progress_label.pack(side=tk.LEFT)
+    progress_layout.addLayout(progress_row)
 
-    # Stats frame for ETA, throughput, cost
-    stats_frame = ttk.Frame(progress_frame)
-    stats_frame.pack(fill=tk.X, pady=(0, 10))
+    stats_row = QHBoxLayout()
+    eta_label = QLabel("ETA: --")
+    throughput_label = QLabel("Durchsatz: --")
+    cost_label = QLabel("Kosten: $0.0000")
 
-    eta_label = ttk.Label(stats_frame, text="ETA: --", font=("", 9))
-    eta_label.pack(side=tk.LEFT, padx=(0, 20))
+    stats_row.addWidget(eta_label)
+    stats_row.addSpacing(20)
+    stats_row.addWidget(throughput_label)
+    stats_row.addSpacing(20)
+    stats_row.addWidget(cost_label)
+    stats_row.addStretch(1)
+    progress_layout.addLayout(stats_row)
 
-    throughput_label = ttk.Label(stats_frame, text="Durchsatz: --", font=("", 9))
-    throughput_label.pack(side=tk.LEFT, padx=(0, 20))
+    log_text = QPlainTextEdit()
+    log_text.setObjectName("LogView")
+    log_text.setReadOnly(True)
+    log_text.setMinimumHeight(140)
+    progress_layout.addWidget(log_text)
 
-    cost_label = ttk.Label(stats_frame, text="Kosten: $0.0000", font=("", 9))
-    cost_label.pack(side=tk.LEFT)
+    root_layout.addWidget(progress_group)
 
-    # Log output
-    log_text = scrolledtext.ScrolledText(
-        progress_frame, height=5, width=80, state=tk.DISABLED, wrap=tk.WORD
-    )
-    log_text.pack(fill=tk.BOTH, expand=True)
+    button_row = QHBoxLayout()
+    button_row.setSpacing(8)
 
-    # Control Buttons
-    button_frame = ttk.Frame(bottom_frame)
-    button_frame.pack(fill=tk.X)
+    start_button = QPushButton("Start Transcription")
+    start_button.setObjectName("StartButton")
+    start_button.clicked.connect(gui_instance.start_transcription)
+    button_row.addWidget(start_button)
 
-    start_button = ttk.Button(
-        button_frame,
-        text="Start Transcription",
-        command=gui_instance.start_transcription,
-        style="Accent.TButton",
-    )
-    start_button.pack(side=tk.LEFT, padx=5)
+    stop_button = QPushButton("Stop")
+    stop_button.setObjectName("StopButton")
+    stop_button.clicked.connect(gui_instance.stop_transcription)
+    stop_button.setEnabled(False)
+    button_row.addWidget(stop_button)
 
-    stop_button = ttk.Button(
-        button_frame, text="Stop", command=gui_instance.stop_transcription, state=tk.DISABLED
-    )
-    stop_button.pack(side=tk.LEFT, padx=5)
+    clear_log_button = QPushButton("Clear Log")
+    clear_log_button.setObjectName("ClearLogButton")
+    clear_log_button.clicked.connect(lambda: clear_log(log_text))
+    button_row.addWidget(clear_log_button)
 
-    clear_log_button = ttk.Button(
-        button_frame, text="Clear Log", command=lambda: clear_log(log_text, gui_instance.root)
-    )
-    clear_log_button.pack(side=tk.LEFT, padx=5)
+    button_row.addStretch(1)
 
-    quit_button = ttk.Button(button_frame, text="Quit", command=gui_instance.root.quit)
-    quit_button.pack(side=tk.RIGHT, padx=5)
+    quit_button = QPushButton("Quit")
+    quit_button.setObjectName("QuitButton")
+    quit_button.clicked.connect(gui_instance.close)
+    button_row.addWidget(quit_button, alignment=Qt.AlignRight)
+
+    root_layout.addLayout(button_row)
 
     return (
+        container,
         progress_bar,
         progress_label,
         eta_label,
@@ -89,9 +105,6 @@ def create_progress_section(parent: tk.Misc, gui_instance) -> tuple:
     )
 
 
-def clear_log(log_text: scrolledtext.ScrolledText, root: tk.Tk):
+def clear_log(log_text: QPlainTextEdit):
     """Clear log output."""
-    log_text.config(state=tk.NORMAL)
-    log_text.delete("1.0", tk.END)
-    log_text.config(state=tk.DISABLED)
-    root.update()
+    log_text.clear()

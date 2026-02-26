@@ -1,51 +1,57 @@
-"""
-API configuration tab.
-"""
+"""API configuration tab (PySide6)."""
 
-import tkinter as tk
-from tkinter import ttk
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFontDatabase
+from PySide6.QtWidgets import (
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from ..utils import toggle_password_visibility
 
 
-def create_api_tab(parent: ttk.Frame, gui_instance):
+def create_api_tab(gui_instance) -> QWidget:
     """Create API configuration tab."""
-    api_settings_frame = ttk.LabelFrame(parent, text="API Settings", padding=10)
-    api_settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    tab = QWidget()
+    layout = QVBoxLayout(tab)
+    layout.setContentsMargins(8, 8, 8, 8)
+    layout.setSpacing(8)
 
-    # API Key
-    api_key_label = ttk.Label(api_settings_frame, text="API Key:")
-    api_key_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+    api_group = QGroupBox("API Settings")
+    api_layout = QGridLayout(api_group)
 
-    api_entry = ttk.Entry(api_settings_frame, textvariable=gui_instance.api_key, width=50, show="*")
-    api_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+    api_layout.addWidget(QLabel("API Key:"), 0, 0)
+    gui_instance.api_key_edit = QLineEdit(gui_instance.api_key_default)
+    gui_instance.api_key_edit.setEchoMode(QLineEdit.Password)
+    api_layout.addWidget(gui_instance.api_key_edit, 0, 1)
 
-    from ..utils import toggle_password_visibility
-
-    show_password_btn = ttk.Button(
-        api_settings_frame, text="Show", command=lambda: toggle_password_visibility(api_entry)
+    show_password_btn = QPushButton("Show")
+    show_password_btn.clicked.connect(
+        lambda: toggle_password_visibility(gui_instance.api_key_edit, show_password_btn)
     )
-    show_password_btn.grid(row=0, column=2, padx=2)
+    api_layout.addWidget(show_password_btn, 0, 2)
 
-    # Base URL
-    base_url_label = ttk.Label(api_settings_frame, text="Base URL:")
-    base_url_label.grid(row=1, column=0, sticky=tk.W, pady=5)
+    api_layout.addWidget(QLabel("Base URL:"), 1, 0)
+    gui_instance.base_url_edit = QLineEdit(gui_instance.base_url_default)
+    api_layout.addWidget(gui_instance.base_url_edit, 1, 1, 1, 2)
 
-    ttk.Entry(api_settings_frame, textvariable=gui_instance.base_url, width=50).grid(
-        row=1, column=1, padx=5, pady=5, sticky=tk.W
-    )
+    api_layout.addWidget(QLabel("Model:"), 2, 0)
+    gui_instance.model_edit = QLineEdit(gui_instance.model_default)
+    api_layout.addWidget(gui_instance.model_edit, 2, 1, 1, 2)
 
-    # Model
-    model_label = ttk.Label(api_settings_frame, text="Model:")
-    model_label.grid(row=2, column=0, sticky=tk.W, pady=5)
+    api_layout.setColumnStretch(1, 1)
+    layout.addWidget(api_group)
 
-    ttk.Entry(api_settings_frame, textvariable=gui_instance.model, width=50).grid(
-        row=2, column=1, padx=5, pady=5, sticky=tk.W
-    )
+    info_group = QGroupBox("Provider Examples")
+    info_layout = QVBoxLayout(info_group)
 
-    # Info Frame
-    provider_examples_frame = ttk.LabelFrame(parent, text="Provider Examples", padding=10)
-    provider_examples_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-    info_text = """
+    info_text = QLabel(
+        """
 OpenAI:
   Base URL: https://api.openai.com/v1
   Models: whisper-1, gpt-4o-transcribe, gpt-4o-mini-transcribe,
@@ -63,8 +69,15 @@ Ollama (Local):
 Together.ai:
   Base URL: https://api.together.xyz/v1
   Model: whisper-large-v3
-    """
-
-    ttk.Label(provider_examples_frame, text=info_text, justify=tk.LEFT, font=("Courier", 9)).pack(
-        anchor=tk.W
+        """.strip()
     )
+    info_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
+    info_text.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+    mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+    mono.setPointSize(9)
+    info_text.setFont(mono)
+    info_layout.addWidget(info_text)
+
+    layout.addWidget(info_group)
+    layout.addStretch(1)
+    return tab

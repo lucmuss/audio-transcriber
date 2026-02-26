@@ -1,63 +1,63 @@
-"""
-Transcription settings tab.
-"""
+"""Transcription settings tab (PySide6)."""
 
-import tkinter as tk
-from tkinter import ttk
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QDoubleSpinBox,
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 
-def create_transcription_tab(parent: ttk.Frame, gui_instance):
+def create_transcription_tab(gui_instance) -> QWidget:
     """Create transcription settings tab."""
-    trans_settings_frame = ttk.LabelFrame(parent, text="Transcription Settings", padding=10)
-    trans_settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    tab = QWidget()
+    layout = QVBoxLayout(tab)
+    layout.setContentsMargins(8, 8, 8, 8)
+    layout.setSpacing(8)
 
-    # Language
-    lang_iso_label = ttk.Label(trans_settings_frame, text="Language (ISO 639-1):")
-    lang_iso_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+    settings_group = QGroupBox("Transcription Settings")
+    settings_layout = QGridLayout(settings_group)
 
-    lang_entry = ttk.Entry(trans_settings_frame, textvariable=gui_instance.language, width=10)
-    lang_entry.grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+    settings_layout.addWidget(QLabel("Language (ISO 639-1):"), 0, 0)
+    gui_instance.language_edit = QLineEdit(gui_instance.language_default)
+    gui_instance.language_edit.setPlaceholderText("en")
+    gui_instance.language_edit.setMaxLength(10)
+    gui_instance.language_edit.setMaximumWidth(120)
+    settings_layout.addWidget(gui_instance.language_edit, 0, 1, alignment=Qt.AlignLeft)
 
-    lang_hint_label = ttk.Label(
-        trans_settings_frame, text="(e.g., en, de, fr - leave empty for auto-detect)", font=("", 9)
-    )
-    lang_hint_label.grid(row=0, column=2, sticky=tk.W, padx=5)
+    hint = QLabel("(e.g., en, de, fr - leave empty for auto-detect)")
+    hint.setStyleSheet("color: #6f7782; font-size: 12px;")
+    settings_layout.addWidget(hint, 0, 2)
 
-    auto_detect_check = ttk.Checkbutton(
-        trans_settings_frame, text="Auto-detect language", variable=gui_instance.detect_language
-    )
-    auto_detect_check.grid(row=1, column=0, columnspan=3, sticky=tk.W, pady=2)
+    gui_instance.detect_language_check = QCheckBox("Auto-detect language")
+    gui_instance.detect_language_check.setChecked(gui_instance.detect_language_default)
+    settings_layout.addWidget(gui_instance.detect_language_check, 1, 0, 1, 3)
 
-    # Temperature
-    temp_label = ttk.Label(trans_settings_frame, text="Temperature:")
-    temp_label.grid(row=2, column=0, sticky=tk.W, pady=5)
+    settings_layout.addWidget(QLabel("Temperature:"), 2, 0)
+    gui_instance.temperature_spin = QDoubleSpinBox()
+    gui_instance.temperature_spin.setRange(0.0, 1.0)
+    gui_instance.temperature_spin.setSingleStep(0.1)
+    gui_instance.temperature_spin.setDecimals(2)
+    gui_instance.temperature_spin.setValue(gui_instance.temperature_default)
+    settings_layout.addWidget(gui_instance.temperature_spin, 2, 1, alignment=Qt.AlignLeft)
 
-    ttk.Spinbox(
-        trans_settings_frame,
-        from_=0.0,
-        to=1.0,
-        increment=0.1,
-        textvariable=gui_instance.temperature,
-        width=10,
-    ).grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+    settings_layout.addWidget(QLabel("Context Prompt:"), 3, 0, alignment=Qt.AlignTop)
+    gui_instance.prompt_edit = QTextEdit()
+    gui_instance.prompt_edit.setPlainText(gui_instance.prompt_default)
+    gui_instance.prompt_edit.setMinimumHeight(100)
+    settings_layout.addWidget(gui_instance.prompt_edit, 3, 1, 1, 2)
 
-    # Prompt
-    prompt_label = ttk.Label(trans_settings_frame, text="Context Prompt:")
-    prompt_label.grid(row=3, column=0, sticky=tk.NW, pady=5)
+    tip = QLabel("Provide context like names, technical terms for better accuracy")
+    tip.setStyleSheet("color: #6f7782; font-size: 12px;")
+    settings_layout.addWidget(tip, 4, 1, 1, 2)
 
-    prompt_text = tk.Text(trans_settings_frame, width=50, height=4)
-    prompt_text.grid(row=3, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
-    prompt_text.insert("1.0", gui_instance.prompt.get())
-
-    # Bind text widget to variable
-    def update_prompt(*args):
-        gui_instance.prompt.set(prompt_text.get("1.0", tk.END).strip())
-
-    prompt_text.bind("<KeyRelease>", update_prompt)
-
-    prompt_tip_label = ttk.Label(
-        trans_settings_frame,
-        text="Provide context like names, technical terms for better accuracy",
-        font=("", 9),
-    )
-    prompt_tip_label.grid(row=4, column=1, columnspan=2, sticky=tk.W, padx=5)
+    settings_layout.setColumnStretch(2, 1)
+    layout.addWidget(settings_group)
+    layout.addStretch(1)
+    return tab

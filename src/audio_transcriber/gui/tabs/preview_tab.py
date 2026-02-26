@@ -1,108 +1,103 @@
-"""
-File preview tab.
-"""
+"""File preview tab (PySide6)."""
 
-import tkinter as tk
 from pathlib import Path
-from tkinter import messagebox, scrolledtext, ttk
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QMessageBox,
+    QPushButton,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+    QPlainTextEdit,
+)
 
 from ...constants import get_model_price_per_minute
 from ...utils import find_audio_files, format_duration
 
 
-def create_preview_tab(parent: ttk.Frame, gui_instance):
+def create_preview_tab(gui_instance) -> QWidget:
     """Create file preview tab."""
-    # Preview Controls
-    control_frame = ttk.Frame(parent)
-    control_frame.pack(fill=tk.X, padx=10, pady=10)
+    tab = QWidget()
+    layout = QVBoxLayout(tab)
+    layout.setContentsMargins(8, 8, 8, 8)
+    layout.setSpacing(8)
 
-    ttk.Button(
-        control_frame, text="📂 Dateien analysieren", command=lambda: analyze_files(gui_instance)
-    ).pack(side=tk.LEFT, padx=5)
+    controls = QHBoxLayout()
+    analyze_btn = QPushButton("📂 Dateien analysieren")
+    analyze_btn.clicked.connect(lambda: analyze_files(gui_instance))
+    controls.addWidget(analyze_btn)
 
-    ttk.Button(
-        control_frame, text="🔄 Aktualisieren", command=lambda: refresh_preview(gui_instance)
-    ).pack(side=tk.LEFT, padx=5)
+    refresh_btn = QPushButton("🔄 Aktualisieren")
+    refresh_btn.clicked.connect(lambda: refresh_preview(gui_instance))
+    controls.addWidget(refresh_btn)
+    controls.addStretch(1)
+    layout.addLayout(controls)
 
-    # File List Frame
-    list_frame = ttk.LabelFrame(parent, text="Gefundene Dateien", padding=10)
-    list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    list_group = QGroupBox("Gefundene Dateien")
+    list_layout = QVBoxLayout(list_group)
 
-    # Scrollable file list with Treeview
-    columns = ("Datei", "Dauer", "Größe", "Format")
-    gui_instance.file_tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=5)
+    gui_instance.file_tree = QTreeWidget()
+    gui_instance.file_tree.setColumnCount(4)
+    gui_instance.file_tree.setHeaderLabels(["Dateiname", "Dauer", "Größe", "Format"])
+    gui_instance.file_tree.setAlternatingRowColors(True)
+    gui_instance.file_tree.itemSelectionChanged.connect(lambda: on_file_select(gui_instance))
+    gui_instance.file_tree.setMinimumHeight(220)
+    gui_instance.file_tree.setColumnWidth(0, 330)
+    gui_instance.file_tree.setColumnWidth(1, 120)
+    gui_instance.file_tree.setColumnWidth(2, 120)
+    gui_instance.file_tree.setColumnWidth(3, 100)
 
-    # Define headings
-    gui_instance.file_tree.heading("Datei", text="Dateiname")
-    gui_instance.file_tree.heading("Dauer", text="Dauer")
-    gui_instance.file_tree.heading("Größe", text="Größe")
-    gui_instance.file_tree.heading("Format", text="Format")
+    list_layout.addWidget(gui_instance.file_tree)
+    layout.addWidget(list_group)
 
-    # Define column widths
-    gui_instance.file_tree.column("Datei", width=300)
-    gui_instance.file_tree.column("Dauer", width=100)
-    gui_instance.file_tree.column("Größe", width=100)
-    gui_instance.file_tree.column("Format", width=80)
+    metadata_group = QGroupBox("Datei-Details")
+    metadata_layout = QVBoxLayout(metadata_group)
 
-    # Add scrollbar
-    scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=gui_instance.file_tree.yview)
-    gui_instance.file_tree.configure(yscrollcommand=scrollbar.set)
+    gui_instance.metadata_text = QPlainTextEdit()
+    gui_instance.metadata_text.setReadOnly(True)
+    gui_instance.metadata_text.setMinimumHeight(180)
+    metadata_layout.addWidget(gui_instance.metadata_text)
 
-    gui_instance.file_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-    scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+    layout.addWidget(metadata_group)
 
-    # Bind selection event
-    gui_instance.file_tree.bind("<<TreeviewSelect>>", lambda e: on_file_select(gui_instance))
+    stats_group = QGroupBox("Zusammenfassung")
+    stats_layout = QVBoxLayout(stats_group)
 
-    # Metadata Display Frame
-    metadata_frame = ttk.LabelFrame(parent, text="Datei-Details", padding=10)
-    metadata_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    gui_instance.stats_label = QLabel("Keine Dateien geladen. Klicken Sie auf 'Dateien analysieren'.")
+    gui_instance.stats_label.setStyleSheet("color: #6f7782; font-size: 12px;")
+    stats_layout.addWidget(gui_instance.stats_label)
 
-    # Metadata text area
-    gui_instance.metadata_text = scrolledtext.ScrolledText(
-        metadata_frame, height=6, width=80, state=tk.DISABLED, wrap=tk.WORD
-    )
-    gui_instance.metadata_text.pack(fill=tk.BOTH, expand=True)
-
-    # Summary Stats Frame
-    stats_frame = ttk.LabelFrame(parent, text="Zusammenfassung", padding=10)
-    stats_frame.pack(fill=tk.X, padx=10, pady=10)
-
-    gui_instance.stats_label = ttk.Label(
-        stats_frame,
-        text="Keine Dateien geladen. Klicken Sie auf 'Dateien analysieren'.",
-        font=("", 9),
-    )
-    gui_instance.stats_label.pack(anchor=tk.W)
+    layout.addWidget(stats_group)
+    return tab
 
 
 def analyze_files(gui_instance):
     """Analyze audio files and display preview."""
-    input_path = gui_instance.input_path.get()
+    input_path = gui_instance.input_path_edit.text().strip()
 
     if not input_path:
-        messagebox.showwarning(
-            "Warnung", "Bitte wählen Sie zuerst eine Datei oder einen Ordner aus."
-        )
+        QMessageBox.warning(gui_instance, "Warnung", "Bitte wählen Sie zuerst eine Datei oder einen Ordner aus.")
         return
 
-    if not Path(input_path).exists():
-        messagebox.showerror("Fehler", f"Pfad existiert nicht: {input_path}")
+    path = Path(input_path)
+    if not path.exists():
+        QMessageBox.critical(gui_instance, "Fehler", f"Pfad existiert nicht: {input_path}")
         return
 
-    # Clear existing items
-    for item in gui_instance.file_tree.get_children():
-        gui_instance.file_tree.delete(item)
+    gui_instance.file_tree.clear()
 
     try:
-        # Find audio files
-        audio_files = find_audio_files(input_path)
+        audio_files = find_audio_files(path)
 
         if not audio_files:
-            messagebox.showwarning("Warnung", "Keine Audio-Dateien gefunden!")
+            QMessageBox.warning(gui_instance, "Warnung", "Keine Audio-Dateien gefunden!")
             return
 
-        # Create a temporary transcriber just for metadata
         from pydub import AudioSegment
 
         total_duration = 0.0
@@ -110,100 +105,83 @@ def analyze_files(gui_instance):
 
         for audio_file in audio_files:
             try:
-                # Get file size
                 file_size = audio_file.stat().st_size
                 total_size += file_size
                 size_mb = file_size / (1024 * 1024)
 
-                # Get audio duration using pydub
                 audio = AudioSegment.from_file(str(audio_file))
-                duration_seconds = len(audio) / 1000.0  # pydub uses milliseconds
+                duration_seconds = len(audio) / 1000.0
                 total_duration += duration_seconds
 
-                # Format values
-                duration_str = format_duration(duration_seconds)
-                size_str = f"{size_mb:.1f} MB"
-                format_str = audio_file.suffix.upper().replace(".", "")
-
-                # Add to tree
-                gui_instance.file_tree.insert(
-                    "",
-                    tk.END,
-                    values=(audio_file.name, duration_str, size_str, format_str),
-                    tags=(str(audio_file),),  # Store full path in tags
+                item = QTreeWidgetItem(
+                    [
+                        audio_file.name,
+                        format_duration(duration_seconds),
+                        f"{size_mb:.1f} MB",
+                        audio_file.suffix.upper().replace(".", ""),
+                    ]
                 )
+                item.setData(0, Qt.UserRole, str(audio_file))
+                gui_instance.file_tree.addTopLevelItem(item)
 
             except Exception:
-                # If error, still add file but with error info
-                gui_instance.file_tree.insert(
-                    "",
-                    tk.END,
-                    values=(
+                item = QTreeWidgetItem(
+                    [
                         audio_file.name,
                         "Fehler",
                         "--",
                         audio_file.suffix.upper().replace(".", ""),
-                    ),
-                    tags=(str(audio_file),),
+                    ]
                 )
+                item.setData(0, Qt.UserRole, str(audio_file))
+                gui_instance.file_tree.addTopLevelItem(item)
 
-        # Update summary stats
         total_duration_str = format_duration(total_duration)
         total_size_mb = total_size / (1024 * 1024)
-        model_price = get_model_price_per_minute(gui_instance.model.get())
+        model_price = get_model_price_per_minute(gui_instance.model_edit.text().strip())
         estimated_cost = (total_duration / 60.0) * model_price
 
-        stats_text = (
+        gui_instance.stats_label.setText(
             f"📁 Dateien: {len(audio_files)} | "
             f"⏱ Gesamtdauer: {total_duration_str} | "
             f"💾 Gesamtgröße: {total_size_mb:.1f} MB | "
-            f"💰 Geschätzte Kosten:  ${estimated_cost:.4f}"
+            f"💰 Geschätzte Kosten: ${estimated_cost:.4f}"
         )
-        gui_instance.stats_label.config(text=stats_text)
 
-    except Exception as e:
-        messagebox.showerror("Fehler", f"Analyse fehlgeschlagen:\n{e}")
+    except Exception as error:
+        QMessageBox.critical(gui_instance, "Fehler", f"Analyse fehlgeschlagen:\n{error}")
 
 
 def on_file_select(gui_instance):
     """Handle file selection in tree view."""
-    selection = gui_instance.file_tree.selection()
-    if not selection:
+    items = gui_instance.file_tree.selectedItems()
+    if not items:
         return
 
-    # Get selected item
-    item = selection[0]
-    tags = gui_instance.file_tree.item(item, "tags")
-
-    if not tags:
+    file_path_value = items[0].data(0, Qt.UserRole)
+    if not file_path_value:
         return
 
-    file_path = Path(tags[0])
-
-    # Display detailed metadata
-    display_file_metadata(gui_instance, file_path)
+    display_file_metadata(gui_instance, Path(file_path_value))
 
 
 def display_file_metadata(gui_instance, file_path: Path):
     """Display detailed metadata for selected file."""
-    gui_instance.metadata_text.config(state=tk.NORMAL)
-    gui_instance.metadata_text.delete("1.0", tk.END)
-
     try:
         from pydub import AudioSegment
         from pydub.utils import mediainfo
 
-        # Load audio file
         audio = AudioSegment.from_file(str(file_path))
         info = mediainfo(str(file_path))
 
-        # Format metadata
-        lines = []
-        lines.append(f"📄 Datei: {file_path.name}")
-        lines.append(f"📂 Pfad: {file_path.parent}")
-        lines.append("")
-        lines.append("=== Audio-Informationen ===")
-        lines.append(f"⏱ Dauer: {format_duration(len(audio) / 1000.0)}")
+        lines = [
+            f"📄 Datei: {file_path.name}",
+            f"📂 Pfad: {file_path.parent}",
+            "",
+            "=== Audio-Informationen ===",
+            f"⏱ Dauer: {format_duration(len(audio) / 1000.0)}",
+        ]
+
         channel_desc = (
             "Stereo"
             if audio.channels == 2
@@ -229,26 +207,27 @@ def display_file_metadata(gui_instance, file_path: Path):
             if "duration" in info:
                 lines.append(f"⏱ Präzise Dauer: {float(info['duration']):.2f}s")
 
-        # Calculate estimated cost
         duration_minutes = len(audio) / 1000.0 / 60.0
-        model_price = get_model_price_per_minute(gui_instance.model.get())
+        model_price = get_model_price_per_minute(gui_instance.model_edit.text().strip())
         cost = duration_minutes * model_price
 
-        lines.append("")
-        lines.append("=== Transkriptions-Schätzung ===")
-        lines.append(f"💰 Geschätzte Kosten: ${cost:.4f}")
-        lines.append(
-            f"⏱ Geschätzte Dauer: ca. {duration_minutes / 10:.1f} - "
-            f"{duration_minutes / 5:.1f} Minuten"
+        lines.extend(
+            [
+                "",
+                "=== Transkriptions-Schätzung ===",
+                f"💰 Geschätzte Kosten: ${cost:.4f}",
+                (
+                    f"⏱ Geschätzte Dauer: ca. {duration_minutes / 10:.1f} - "
+                    f"{duration_minutes / 5:.1f} Minuten"
+                ),
+                "   (abhängig von Concurrency und Netzwerk)",
+            ]
         )
-        lines.append("   (abhängig von Concurrency und Netzwerk)")
 
-        gui_instance.metadata_text.insert("1.0", "\n".join(lines))
+        gui_instance.metadata_text.setPlainText("\n".join(lines))
 
-    except Exception as e:
-        gui_instance.metadata_text.insert("1.0", f"Fehler beim Laden der Metadaten:\n{e}")
-
-    gui_instance.metadata_text.config(state=tk.DISABLED)
+    except Exception as error:
+        gui_instance.metadata_text.setPlainText(f"Fehler beim Laden der Metadaten:\n{error}")
 
 
 def refresh_preview(gui_instance):

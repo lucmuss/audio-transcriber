@@ -1,84 +1,94 @@
-"""
-Export settings tab.
-"""
+"""Export settings tab (PySide6)."""
 
-import tkinter as tk
-from tkinter import filedialog, ttk
+from pathlib import Path
+
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QFileDialog,
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 
-def create_export_tab(parent: ttk.Frame, gui_instance):
+def create_export_tab(gui_instance) -> QWidget:
     """Create export settings tab."""
-    # Export Formats Frame
-    formats_frame = ttk.LabelFrame(parent, text="Export Formats", padding=10)
-    formats_frame.pack(fill=tk.X, padx=10, pady=10)
+    tab = QWidget()
+    layout = QVBoxLayout(tab)
+    layout.setContentsMargins(8, 8, 8, 8)
+    layout.setSpacing(8)
 
-    ttk.Label(formats_frame, text="Select additional export formats:").pack(
-        anchor=tk.W, pady=(0, 10)
-    )
+    formats_group = QGroupBox("Export Formats")
+    formats_layout = QVBoxLayout(formats_group)
 
-    # Checkboxes for each format
-    gui_instance.export_docx_var = tk.BooleanVar(value=False)
-    gui_instance.export_md_var = tk.BooleanVar(value=False)
-    gui_instance.export_latex_var = tk.BooleanVar(value=False)
+    formats_layout.addWidget(QLabel("Select additional export formats:"))
 
-    ttk.Checkbutton(
-        formats_frame, text="DOCX (Microsoft Word)", variable=gui_instance.export_docx_var
-    ).pack(anchor=tk.W, pady=2)
-    ttk.Checkbutton(formats_frame, text="Markdown (.md)", variable=gui_instance.export_md_var).pack(
-        anchor=tk.W, pady=2
-    )
-    ttk.Checkbutton(
-        formats_frame, text="LaTeX (.tex)", variable=gui_instance.export_latex_var
-    ).pack(anchor=tk.W, pady=2)
+    gui_instance.export_docx_check = QCheckBox("DOCX (Microsoft Word)")
+    gui_instance.export_md_check = QCheckBox("Markdown (.md)")
+    gui_instance.export_latex_check = QCheckBox("LaTeX (.tex)")
 
-    # Export Settings Frame
-    settings_frame = ttk.LabelFrame(parent, text="Export Settings", padding=10)
-    settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    formats_layout.addWidget(gui_instance.export_docx_check)
+    formats_layout.addWidget(gui_instance.export_md_check)
+    formats_layout.addWidget(gui_instance.export_latex_check)
 
-    # Export Directory
-    ttk.Label(settings_frame, text="Export Directory:").grid(row=0, column=0, sticky=tk.W, pady=5)
-    ttk.Entry(settings_frame, textvariable=gui_instance.export_dir, width=50).grid(
-        row=0, column=1, padx=5, pady=5
-    )
-    ttk.Button(settings_frame, text="Browse", command=lambda: browse_export_dir(gui_instance)).grid(
-        row=0, column=2, padx=2
-    )
+    layout.addWidget(formats_group)
 
-    # Document Title
-    ttk.Label(settings_frame, text="Document Title:").grid(row=1, column=0, sticky=tk.W, pady=5)
-    ttk.Entry(settings_frame, textvariable=gui_instance.export_title, width=50).grid(
-        row=1, column=1, padx=5, pady=5, sticky=tk.W
-    )
-    ttk.Label(settings_frame, text="(Optional - uses filename if empty)", font=("", 9)).grid(
-        row=1, column=2, sticky=tk.W, padx=5
-    )
+    settings_group = QGroupBox("Export Settings")
+    settings_layout = QGridLayout(settings_group)
 
-    # Document Author
-    ttk.Label(settings_frame, text="Author:").grid(row=2, column=0, sticky=tk.W, pady=5)
-    ttk.Entry(settings_frame, textvariable=gui_instance.export_author, width=50).grid(
-        row=2, column=1, padx=5, pady=5, sticky=tk.W
-    )
-    ttk.Label(settings_frame, text="(Optional)", font=("", 9)).grid(
-        row=2, column=2, sticky=tk.W, padx=5
-    )
+    settings_layout.addWidget(QLabel("Export Directory:"), 0, 0)
+    gui_instance.export_dir_edit = QLineEdit(gui_instance.export_dir_default)
+    settings_layout.addWidget(gui_instance.export_dir_edit, 0, 1)
 
-    # Info Frame
-    info_frame = ttk.LabelFrame(parent, text="Information", padding=10)
-    info_frame.pack(fill=tk.X, padx=10, pady=10)
+    browse_btn = QPushButton("Browse")
+    browse_btn.clicked.connect(lambda: browse_export_dir(gui_instance))
+    settings_layout.addWidget(browse_btn, 0, 2)
 
-    info_text = """Export transcriptions to additional formats for various use cases:
+    settings_layout.addWidget(QLabel("Document Title:"), 1, 0)
+    gui_instance.export_title_edit = QLineEdit(gui_instance.export_title_default)
+    settings_layout.addWidget(gui_instance.export_title_edit, 1, 1)
+
+    title_hint = QLabel("(Optional - uses filename if empty)")
+    title_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
+    settings_layout.addWidget(title_hint, 1, 2)
+
+    settings_layout.addWidget(QLabel("Author:"), 2, 0)
+    gui_instance.export_author_edit = QLineEdit(gui_instance.export_author_default)
+    settings_layout.addWidget(gui_instance.export_author_edit, 2, 1)
+
+    author_hint = QLabel("(Optional)")
+    author_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
+    settings_layout.addWidget(author_hint, 2, 2)
+
+    settings_layout.setColumnStretch(1, 1)
+    layout.addWidget(settings_group)
+
+    info_group = QGroupBox("Information")
+    info_layout = QVBoxLayout(info_group)
+    info_label = QLabel(
+        """Export transcriptions to additional formats for various use cases:
 
 • DOCX: Microsoft Word documents with metadata and formatting
 • Markdown: Clean, portable text format for documentation
 • LaTeX: Scientific/academic documents with proper formatting
 
 All formats include metadata (title, author, date, duration, etc.)"""
+    )
+    info_label.setWordWrap(True)
+    info_layout.addWidget(info_label)
 
-    ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(anchor=tk.W)
+    layout.addWidget(info_group)
+    layout.addStretch(1)
+    return tab
 
 
 def browse_export_dir(gui_instance):
     """Browse for export directory."""
-    directory = filedialog.askdirectory(title="Select Export Directory")
+    current = gui_instance.export_dir_edit.text().strip() or str(Path.cwd())
+    directory = QFileDialog.getExistingDirectory(gui_instance, "Select Export Directory", current)
     if directory:
-        gui_instance.export_dir.set(directory)
+        gui_instance.export_dir_edit.setText(directory)

@@ -25,7 +25,7 @@ python -m audio_transcriber.gui
 
 ## Benutzeroberfläche Übersicht
 
-Die GUI ist in **4 Tabs** organisiert:
+Die GUI ist in **7 Tabs** organisiert:
 
 ### 📁 Tab 1: Haupteinstellungen
 
@@ -263,14 +263,8 @@ Oder direkt in der GUI eintragen (Tab "API Konfiguration").
 
 **Lösung:**
 ```bash
-# Tkinter installieren (falls fehlt)
-# Linux
-sudo apt-get install python3-tk
-
-# macOS
-brew install python-tk
-
-# Windows (bereits enthalten)
+# PySide6 installieren/aktualisieren
+uv pip install -U PySide6
 ```
 
 ### Langsame Verarbeitung

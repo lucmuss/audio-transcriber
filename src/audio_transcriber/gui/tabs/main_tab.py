@@ -1,152 +1,157 @@
-"""
-Main tab for input/output and behavior settings.
-"""
+"""Main tab for input/output and behavior settings (PySide6)."""
 
-import tkinter as tk
-from tkinter import filedialog, ttk
+from pathlib import Path
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
+    QFileDialog,
+    QGridLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 from ...constants import VALID_RESPONSE_FORMATS
 
 
-def create_main_tab(parent: ttk.Frame, gui_instance):
+AUDIO_FILTER = "Audio Files (*.mp3 *.wav *.m4a *.flac *.ogg *.aac *.wma *.mp4);;All Files (*)"
+
+
+def create_main_tab(gui_instance) -> QWidget:
     """Create main settings tab with input/output and behavior options."""
-    # Input Section
-    input_frame = ttk.LabelFrame(parent, text="Input", padding=10)
-    input_frame.pack(fill=tk.X, padx=10, pady=10)
+    tab = QWidget()
+    layout = QVBoxLayout(tab)
+    layout.setContentsMargins(8, 8, 8, 8)
+    layout.setSpacing(8)
 
-    label1 = ttk.Label(input_frame, text="Audio File or Folder:")
-    label1.grid(row=0, column=0, sticky=tk.W, pady=5)
+    input_group = QGroupBox("Input")
+    input_layout = QGridLayout(input_group)
 
-    ttk.Entry(input_frame, textvariable=gui_instance.input_path, width=50).grid(
-        row=0, column=1, padx=5, pady=5
-    )
+    input_layout.addWidget(QLabel("Audio File or Folder:"), 0, 0)
 
-    choose_file_btn = ttk.Button(
-        input_frame, text="Choose File", command=lambda: browse_file(gui_instance)
-    )
-    choose_file_btn.grid(row=0, column=2, padx=2)
+    gui_instance.input_path_edit = QLineEdit(gui_instance.input_path_default)
+    gui_instance.input_path_edit.setPlaceholderText("Select an audio file or folder")
+    input_layout.addWidget(gui_instance.input_path_edit, 0, 1)
 
-    choose_folder_btn = ttk.Button(
-        input_frame, text="Choose Folder", command=lambda: browse_directory(gui_instance)
-    )
-    choose_folder_btn.grid(row=0, column=3, padx=2)
+    choose_file_btn = QPushButton("Choose File")
+    choose_file_btn.clicked.connect(lambda: browse_file(gui_instance))
+    input_layout.addWidget(choose_file_btn, 0, 2)
 
-    # Output Section
-    output_frame = ttk.LabelFrame(parent, text="Output", padding=10)
-    output_frame.pack(fill=tk.X, padx=10, pady=10)
+    choose_folder_btn = QPushButton("Choose Folder")
+    choose_folder_btn.clicked.connect(lambda: browse_directory(gui_instance))
+    input_layout.addWidget(choose_folder_btn, 0, 3)
 
-    label2 = ttk.Label(output_frame, text="Transcription Folder:")
-    label2.grid(row=0, column=0, sticky=tk.W, pady=5)
+    input_layout.setColumnStretch(1, 1)
+    layout.addWidget(input_group)
 
-    ttk.Entry(output_frame, textvariable=gui_instance.output_dir, width=50).grid(
-        row=0, column=1, padx=5, pady=5
-    )
+    output_group = QGroupBox("Output")
+    output_layout = QGridLayout(output_group)
 
-    browse_output_btn = ttk.Button(
-        output_frame, text="Browse", command=lambda: browse_output(gui_instance)
-    )
-    browse_output_btn.grid(row=0, column=2, padx=2)
+    output_layout.addWidget(QLabel("Transcription Folder:"), 0, 0)
+    gui_instance.output_dir_edit = QLineEdit(gui_instance.output_dir_default)
+    output_layout.addWidget(gui_instance.output_dir_edit, 0, 1)
 
-    label3 = ttk.Label(output_frame, text="Segments Folder:")
-    label3.grid(row=1, column=0, sticky=tk.W, pady=5)
+    browse_output_btn = QPushButton("Browse")
+    browse_output_btn.clicked.connect(lambda: browse_output(gui_instance))
+    output_layout.addWidget(browse_output_btn, 0, 2)
 
-    ttk.Entry(output_frame, textvariable=gui_instance.segments_dir, width=50).grid(
-        row=1, column=1, padx=5, pady=5
-    )
+    output_layout.addWidget(QLabel("Segments Folder:"), 1, 0)
+    gui_instance.segments_dir_edit = QLineEdit(gui_instance.segments_dir_default)
+    output_layout.addWidget(gui_instance.segments_dir_edit, 1, 1)
 
-    browse_segments_btn = ttk.Button(
-        output_frame, text="Browse", command=lambda: browse_segments(gui_instance)
-    )
-    browse_segments_btn.grid(row=1, column=2, padx=2)
+    browse_segments_btn = QPushButton("Browse")
+    browse_segments_btn.clicked.connect(lambda: browse_segments(gui_instance))
+    output_layout.addWidget(browse_segments_btn, 1, 2)
 
-    label4 = ttk.Label(output_frame, text="Output Format:")
-    label4.grid(row=2, column=0, sticky=tk.W, pady=5)
+    output_layout.addWidget(QLabel("Output Format:"), 2, 0)
+    gui_instance.response_format_combo = QComboBox()
+    gui_instance.response_format_combo.addItems(sorted(VALID_RESPONSE_FORMATS))
+    default_format = gui_instance.response_format_default
+    format_index = gui_instance.response_format_combo.findText(default_format)
+    if format_index >= 0:
+        gui_instance.response_format_combo.setCurrentIndex(format_index)
+    output_layout.addWidget(gui_instance.response_format_combo, 2, 1, alignment=Qt.AlignLeft)
 
-    format_combo = ttk.Combobox(
-        output_frame,
-        textvariable=gui_instance.response_format,
-        values=list(VALID_RESPONSE_FORMATS),
-        state="readonly",
-        width=20,
-    )
-    format_combo.grid(row=2, column=1, sticky=tk.W, padx=5, pady=5)
+    output_layout.setColumnStretch(1, 1)
+    layout.addWidget(output_group)
 
-    # Behavior Options
-    behavior_frame = ttk.LabelFrame(parent, text="Behavior", padding=10)
-    behavior_frame.pack(fill=tk.X, padx=10, pady=10)
+    behavior_group = QGroupBox("Behavior")
+    behavior_layout = QVBoxLayout(behavior_group)
 
-    ttk.Checkbutton(
-        behavior_frame, text="Keep segment files", variable=gui_instance.keep_segments
-    ).grid(row=0, column=0, sticky=tk.W, pady=2)
+    gui_instance.keep_segments_check = QCheckBox("Keep segment files")
+    gui_instance.keep_segments_check.setChecked(gui_instance.keep_segments_default)
+    behavior_layout.addWidget(gui_instance.keep_segments_check)
 
-    ttk.Checkbutton(
-        behavior_frame,
-        text="Skip existing files",
-        variable=gui_instance.skip_existing,
-    ).grid(row=1, column=0, sticky=tk.W, pady=2)
+    gui_instance.skip_existing_check = QCheckBox("Skip existing files")
+    gui_instance.skip_existing_check.setChecked(gui_instance.skip_existing_default)
+    behavior_layout.addWidget(gui_instance.skip_existing_check)
 
-    ttk.Checkbutton(behavior_frame, text="Verbose logging", variable=gui_instance.verbose).grid(
-        row=2, column=0, sticky=tk.W, pady=2
-    )
+    gui_instance.verbose_check = QCheckBox("Verbose logging")
+    gui_instance.verbose_check.setChecked(gui_instance.verbose_default)
+    behavior_layout.addWidget(gui_instance.verbose_check)
 
-    # Advanced Settings (Segmentation & Performance)
-    advanced_frame = ttk.LabelFrame(parent, text="Advanced Settings", padding=10)
-    advanced_frame.pack(fill=tk.X, padx=10, pady=10)
+    layout.addWidget(behavior_group)
 
-    # Segment length
-    seg_length_label = ttk.Label(advanced_frame, text="Segment Length (seconds):")
-    seg_length_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+    advanced_group = QGroupBox("Advanced Settings")
+    advanced_layout = QGridLayout(advanced_group)
 
-    ttk.Spinbox(
-        advanced_frame, from_=60, to=1800, textvariable=gui_instance.segment_length, width=10
-    ).grid(row=0, column=1, padx=5, pady=5, sticky=tk.W)
+    advanced_layout.addWidget(QLabel("Segment Length (seconds):"), 0, 0)
+    gui_instance.segment_length_spin = QSpinBox()
+    gui_instance.segment_length_spin.setRange(60, 1800)
+    gui_instance.segment_length_spin.setValue(gui_instance.segment_length_default)
+    advanced_layout.addWidget(gui_instance.segment_length_spin, 0, 1, alignment=Qt.AlignLeft)
 
-    # Overlap
-    overlap_label = ttk.Label(advanced_frame, text="Overlap (seconds):")
-    overlap_label.grid(row=1, column=0, sticky=tk.W, pady=5)
+    advanced_layout.addWidget(QLabel("Overlap (seconds):"), 1, 0)
+    gui_instance.overlap_spin = QSpinBox()
+    gui_instance.overlap_spin.setRange(0, 60)
+    gui_instance.overlap_spin.setValue(gui_instance.overlap_default)
+    advanced_layout.addWidget(gui_instance.overlap_spin, 1, 1, alignment=Qt.AlignLeft)
 
-    ttk.Spinbox(advanced_frame, from_=0, to=60, textvariable=gui_instance.overlap, width=10).grid(
-        row=1, column=1, padx=5, pady=5, sticky=tk.W
-    )
+    advanced_layout.addWidget(QLabel("Parallel Transcriptions:"), 2, 0)
+    gui_instance.concurrency_spin = QSpinBox()
+    gui_instance.concurrency_spin.setRange(1, 16)
+    gui_instance.concurrency_spin.setValue(gui_instance.concurrency_default)
+    advanced_layout.addWidget(gui_instance.concurrency_spin, 2, 1, alignment=Qt.AlignLeft)
 
-    # Concurrency
-    parallel_label = ttk.Label(advanced_frame, text="Parallel Transcriptions:")
-    parallel_label.grid(row=2, column=0, sticky=tk.W, pady=5)
+    advanced_layout.setColumnStretch(2, 1)
+    layout.addWidget(advanced_group)
 
-    ttk.Spinbox(
-        advanced_frame, from_=1, to=16, textvariable=gui_instance.concurrency, width=10
-    ).grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
+    layout.addStretch(1)
+    return tab
 
 
 def browse_file(gui_instance):
     """Browse for audio file."""
-    filename = filedialog.askopenfilename(
-        title="Audio-Datei wählen",
-        filetypes=[
-            ("Audio-Dateien", "*.mp3 *.wav *.m4a *.flac *.ogg *.aac *.wma *.mp4"),
-            ("Alle Dateien", "*.*"),
-        ],
-    )
+    filename, _ = QFileDialog.getOpenFileName(gui_instance, "Audio-Datei wählen", "", AUDIO_FILTER)
     if filename:
-        gui_instance.input_path.set(filename)
+        gui_instance.input_path_edit.setText(filename)
 
 
 def browse_directory(gui_instance):
     """Browse for directory."""
-    directory = filedialog.askdirectory(title="Ordner mit Audio-Dateien wählen")
+    directory = QFileDialog.getExistingDirectory(gui_instance, "Ordner mit Audio-Dateien wählen")
     if directory:
-        gui_instance.input_path.set(directory)
+        gui_instance.input_path_edit.setText(directory)
 
 
 def browse_output(gui_instance):
     """Browse for output directory."""
-    directory = filedialog.askdirectory(title="Ausgabe-Ordner wählen")
+    current = gui_instance.output_dir_edit.text().strip() or str(Path.cwd())
+    directory = QFileDialog.getExistingDirectory(gui_instance, "Ausgabe-Ordner wählen", current)
     if directory:
-        gui_instance.output_dir.set(directory)
+        gui_instance.output_dir_edit.setText(directory)
 
 
 def browse_segments(gui_instance):
     """Browse for segments directory."""
-    directory = filedialog.askdirectory(title="Segment-Ordner wählen")
+    current = gui_instance.segments_dir_edit.text().strip() or str(Path.cwd())
+    directory = QFileDialog.getExistingDirectory(gui_instance, "Segment-Ordner wählen", current)
     if directory:
-        gui_instance.segments_dir.set(directory)
+        gui_instance.segments_dir_edit.setText(directory)

@@ -1,89 +1,87 @@
-"""
-Summarization settings tab.
-"""
+"""Summarization settings tab (PySide6)."""
 
-import tkinter as tk
-from tkinter import filedialog, ttk
+from pathlib import Path
+
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QFileDialog,
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 
-def create_summary_tab(parent: ttk.Frame, gui_instance):
+def create_summary_tab(gui_instance) -> QWidget:
     """Create summarization settings tab."""
-    # Enable Summarization
-    summarize_check = ttk.Checkbutton(
-        parent, text="Zusammenfassung erstellen", variable=gui_instance.summarize
-    )
-    summarize_check.pack(anchor=tk.W, padx=10, pady=10)
+    tab = QWidget()
+    layout = QVBoxLayout(tab)
+    layout.setContentsMargins(8, 8, 8, 8)
+    layout.setSpacing(8)
 
-    # Summary Settings Frame
-    summary_settings_frame = ttk.LabelFrame(
-        parent, text="Zusammenfassungs-Einstellungen", padding=10
-    )
-    summary_settings_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+    gui_instance.summarize_check = QCheckBox("Zusammenfassung erstellen")
+    gui_instance.summarize_check.setChecked(gui_instance.summarize_default)
+    layout.addWidget(gui_instance.summarize_check, alignment=Qt.AlignLeft)
 
-    # Summary Directory
-    summary_dir_label = ttk.Label(summary_settings_frame, text="Summary-Ordner:")
-    summary_dir_label.grid(row=0, column=0, sticky=tk.W, pady=5)
+    settings_group = QGroupBox("Zusammenfassungs-Einstellungen")
+    settings_layout = QGridLayout(settings_group)
 
-    ttk.Entry(summary_settings_frame, textvariable=gui_instance.summary_dir, width=50).grid(
-        row=0, column=1, padx=5, pady=5
-    )
+    settings_layout.addWidget(QLabel("Summary-Ordner:"), 0, 0)
+    gui_instance.summary_dir_edit = QLineEdit(gui_instance.summary_dir_default)
+    settings_layout.addWidget(gui_instance.summary_dir_edit, 0, 1)
 
-    browse_summary_btn = ttk.Button(
-        summary_settings_frame, text="Durchsuchen", command=lambda: browse_summary_dir(gui_instance)
-    )
-    browse_summary_btn.grid(row=0, column=2, padx=2)
+    browse_summary_btn = QPushButton("Durchsuchen")
+    browse_summary_btn.clicked.connect(lambda: browse_summary_dir(gui_instance))
+    settings_layout.addWidget(browse_summary_btn, 0, 2)
 
-    # Summary Model
-    summary_model_label = ttk.Label(summary_settings_frame, text="Summary-Modell:")
-    summary_model_label.grid(row=1, column=0, sticky=tk.W, pady=5)
+    settings_layout.addWidget(QLabel("Summary-Modell:"), 1, 0)
+    gui_instance.summary_model_edit = QLineEdit(gui_instance.summary_model_default)
+    settings_layout.addWidget(gui_instance.summary_model_edit, 1, 1)
 
-    ttk.Entry(summary_settings_frame, textvariable=gui_instance.summary_model, width=50).grid(
-        row=1, column=1, padx=5, pady=5, sticky=tk.W
-    )
+    model_hint = QLabel("(z.B. gpt-4o-mini, gpt-4, gpt-3.5-turbo)")
+    model_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
+    settings_layout.addWidget(model_hint, 1, 2)
 
-    model_hint = ttk.Label(
-        summary_settings_frame, text="(z.B. gpt-4o-mini, gpt-4, gpt-3.5-turbo)", font=("", 9)
-    )
-    model_hint.grid(row=1, column=2, sticky=tk.W, padx=5)
+    settings_layout.addWidget(QLabel("Summary-Prompt:"), 2, 0, alignment=Qt.AlignTop)
+    gui_instance.summary_prompt_edit = QTextEdit()
+    gui_instance.summary_prompt_edit.setPlainText(gui_instance.summary_prompt_default)
+    gui_instance.summary_prompt_edit.setMinimumHeight(120)
+    settings_layout.addWidget(gui_instance.summary_prompt_edit, 2, 1, 1, 2)
 
-    # Summary Prompt
-    summary_prompt_label = ttk.Label(summary_settings_frame, text="Summary-Prompt:")
-    summary_prompt_label.grid(row=2, column=0, sticky=tk.NW, pady=5)
+    summary_hint = QLabel("Beschreiben Sie, wie die Zusammenfassung erstellt werden soll")
+    summary_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
+    settings_layout.addWidget(summary_hint, 3, 1, 1, 2)
 
-    summary_prompt_text = tk.Text(summary_settings_frame, width=50, height=6)
-    summary_prompt_text.grid(row=2, column=1, columnspan=2, padx=5, pady=5, sticky=tk.W)
-    summary_prompt_text.insert("1.0", gui_instance.summary_prompt.get())
+    settings_layout.setColumnStretch(1, 1)
+    layout.addWidget(settings_group)
 
-    # Bind text widget to variable
-    def update_summary_prompt(*args):
-        gui_instance.summary_prompt.set(summary_prompt_text.get("1.0", tk.END).strip())
-
-    summary_prompt_text.bind("<KeyRelease>", update_summary_prompt)
-
-    summary_tip_label = ttk.Label(
-        summary_settings_frame,
-        text="Beschreiben Sie, wie die Zusammenfassung erstellt werden soll",
-        font=("", 9),
-    )
-    summary_tip_label.grid(row=3, column=1, columnspan=2, sticky=tk.W, padx=5)
-
-    # Info Frame
-    info_frame = ttk.LabelFrame(parent, text="Information", padding=10)
-    info_frame.pack(fill=tk.X, padx=10, pady=10)
-
-    info_text = """Die Zusammenfassungs-Funktion nutzt ein LLM (Large Language Model),
+    info_group = QGroupBox("Information")
+    info_layout = QVBoxLayout(info_group)
+    info_label = QLabel(
+        """Die Zusammenfassungs-Funktion nutzt ein LLM (Large Language Model),
 um automatisch eine prägnante Zusammenfassung der Transkription zu erstellen.
 
 Die Zusammenfassung wird im angegebenen Summary-Ordner gespeichert.
 
 Hinweis: Dies verursacht zusätzliche API-Kosten basierend auf der
 Länge der Transkription und dem gewählten Modell."""
+    )
+    info_label.setWordWrap(True)
+    info_layout.addWidget(info_label)
 
-    ttk.Label(info_frame, text=info_text, justify=tk.LEFT).pack(anchor=tk.W)
+    layout.addWidget(info_group)
+    layout.addStretch(1)
+    return tab
 
 
 def browse_summary_dir(gui_instance):
     """Browse for summary directory."""
-    directory = filedialog.askdirectory(title="Summary-Ordner wählen")
+    current = gui_instance.summary_dir_edit.text().strip() or str(Path.cwd())
+    directory = QFileDialog.getExistingDirectory(gui_instance, "Summary-Ordner wählen", current)
     if directory:
-        gui_instance.summary_dir.set(directory)
+        gui_instance.summary_dir_edit.setText(directory)
