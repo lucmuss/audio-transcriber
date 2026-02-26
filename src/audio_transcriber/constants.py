@@ -39,22 +39,22 @@ DEFAULT_DIARIZATION_FORMAT = "diarized_json"
 
 # Summarization defaults
 DEFAULT_SUMMARY_MODEL = "gpt-5-mini"
-DEFAULT_SUMMARY_TEMPERATURE = 1.0  # Standard temperature for modern models like gpt-5-mini
 DEFAULT_SUMMARY_PROMPT = (
-    "Erstelle eine extrem detaillierte und strukturierte Zusammenfassung des Transkripts im Markdown-Format. "
-    "Nutze folgende Struktur:\n"
-    "# Ausführliche Zusammenfassung\n"
-    "[Hier ein detaillierter Überblick über das gesamte Gespräch]\n\n"
-    "## Zentrale Themen & Details\n"
-    "[Liste alle wichtigen Themen mit Unterpunkten und Details auf]\n\n"
-    "## Entscheidungen & Ergebnisse\n"
-    "[Was wurde konkret beschlossen?]\n\n"
-    "## Offene Punkte & Fragen\n"
-    "[Was blieb ungeklärt?]\n\n"
-    "## Meeting-Protokoll (TODO-Liste)\n"
-    "Erstelle eine Tabelle mit folgenden Spalten: Aufgabe, Verantwortlich, Frist, Status. "
-    "Falls Informationen fehlen, trage 'Nicht erwähnt' ein.\n\n"
-    "Schreibe die Zusammenfassung auf Deutsch, es sei denn, das Transkript ist in einer anderen Sprache."
+    "Create an extremely detailed and structured summary of the transcription in Markdown format. "
+    "Use the following structure (translate headers to the target language):\n"
+    "# Detailed Summary\n"
+    "[Provide a comprehensive overview of the entire conversation here]\n\n"
+    "## Key Topics & Details\n"
+    "[List all important topics with sub-points and specific details]\n\n"
+    "## Decisions & Outcomes\n"
+    "[What was specifically decided?]\n\n"
+    "## Open Questions & Issues\n"
+    "[What remained unresolved?]\n\n"
+    "## Meeting Minutes (TODO List)\n"
+    "Create a table with the following columns: Task, Owner, Deadline, Status. "
+    "If information is missing, enter 'Not mentioned'.\n\n"
+    "LENGTH LIMIT: Ensure the summary is comprehensive but does not exceed approximately 3-4 DIN-A4 pages (maximum 3000 words).\n"
+    "IMPORTANT: Write the ENTIRE summary, including all HEADERS and tables, in the SAME LANGUAGE as the transcription."
 )
 
 # Pricing (per minute, in USD) - Model-specific rates

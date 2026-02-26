@@ -25,10 +25,10 @@ def create_export_tab(gui_instance) -> QWidget:
     formats_group = QGroupBox("Export Formats")
     formats_layout = QVBoxLayout(formats_group)
 
-    formats_layout.addWidget(QLabel("Wähle zusätzliche Export-Formate:"))
+    formats_layout.addWidget(QLabel("Select additional export formats:"))
 
     gui_instance.export_md_check = QCheckBox("Markdown (.md)")
-    gui_instance.export_md_check.setChecked(True)  # Standardmäßig an
+    gui_instance.export_md_check.setChecked(True)  # Enabled by default
     gui_instance.export_latex_check = QCheckBox("LaTeX (.tex)")
 
     formats_layout.addWidget(gui_instance.export_md_check)
@@ -36,14 +36,14 @@ def create_export_tab(gui_instance) -> QWidget:
 
     layout.addWidget(formats_group)
 
-    settings_group = QGroupBox("Export-Einstellungen")
+    settings_group = QGroupBox("Export Settings")
     settings_layout = QGridLayout(settings_group)
 
-    settings_layout.addWidget(QLabel("Export-Ordner:"), 0, 0)
+    settings_layout.addWidget(QLabel("Export Directory:"), 0, 0)
     gui_instance.export_dir_edit = QLineEdit(gui_instance.export_dir_default)
     settings_layout.addWidget(gui_instance.export_dir_edit, 0, 1)
 
-    browse_btn = QPushButton("Durchsuchen")
+    browse_btn = QPushButton("Browse")
     browse_btn.clicked.connect(lambda: browse_export_dir(gui_instance))
     settings_layout.addWidget(browse_btn, 0, 2)
 
@@ -53,10 +53,10 @@ def create_export_tab(gui_instance) -> QWidget:
     info_group = QGroupBox("Information")
     info_layout = QVBoxLayout(info_group)
     info_label = QLabel(
-        """Exportiert Transkriptionen in zusätzliche Formate:
+        """Export transcriptions into additional formats:
 
-• Markdown: Sauberes, portables Textformat für Dokumentationen
-• LaTeX: Wissenschaftliche Dokumente mit korrekter Formatierung"""
+• Markdown: Clean, portable text format for documentation
+• LaTeX: Scientific documents with correct formatting"""
     )
     info_label.setWordWrap(True)
     info_layout.addWidget(info_label)

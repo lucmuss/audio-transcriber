@@ -44,11 +44,12 @@ def create_diarization_tab(gui_instance) -> QWidget:
 
     settings_layout.addWidget(QLabel("Number of Speakers:"), 0, 0)
     gui_instance.num_speakers_spin = QSpinBox()
-    gui_instance.num_speakers_spin.setRange(1, 20)
+    gui_instance.num_speakers_spin.setRange(0, 20)
+    gui_instance.num_speakers_spin.setSpecialValueText("Auto")
     gui_instance.num_speakers_spin.setValue(gui_instance.num_speakers_default)
     settings_layout.addWidget(gui_instance.num_speakers_spin, 0, 1, alignment=Qt.AlignLeft)
 
-    speaker_hint = QLabel("(Optional: leave for auto-detection)")
+    speaker_hint = QLabel("(Select 'Auto' for automatic detection)")
     speaker_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
     settings_layout.addWidget(speaker_hint, 0, 2)
 

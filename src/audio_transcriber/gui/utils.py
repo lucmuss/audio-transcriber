@@ -52,6 +52,53 @@ def apply_theme(app: QApplication):
             min-height: 32px;
         }
 
+        /* Standard styling for SpinBoxes to ensure arrows are visible */
+        QSpinBox, QDoubleSpinBox {
+            padding-right: 20px; /* Make room for arrows */
+        }
+
+        QSpinBox::up-button, QDoubleSpinBox::up-button {
+            subcontrol-origin: border;
+            subcontrol-position: top right;
+            width: 20px;
+            border-left: 1px solid #c6cfde;
+            border-bottom: 1px solid #c6cfde;
+            border-top-right-radius: 8px;
+            background-color: #f0f4f9;
+        }
+
+        QSpinBox::down-button, QDoubleSpinBox::down-button {
+            subcontrol-origin: border;
+            subcontrol-position: bottom right;
+            width: 20px;
+            border-left: 1px solid #c6cfde;
+            border-bottom-right-radius: 8px;
+            background-color: #f0f4f9;
+        }
+
+        QSpinBox::up-button:hover, QDoubleSpinBox::up-button:hover,
+        QSpinBox::down-button:hover, QDoubleSpinBox::down-button:hover {
+            background-color: #e1e8f0;
+        }
+
+        QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+            image: url(none); /* Clear default if any */
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 5px solid #1f304b; /* Dark visible arrow */
+        }
+
+        QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+            image: url(none);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid #1f304b; /* Dark visible arrow */
+        }
+
         QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus, QTreeWidget:focus, QListWidget:focus {
             border: 1px solid #2e70ed;
             outline: none;

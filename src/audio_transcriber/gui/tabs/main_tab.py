@@ -129,14 +129,14 @@ def create_main_tab(gui_instance) -> QWidget:
 
 def browse_file(gui_instance):
     """Browse for audio file."""
-    filename, _ = QFileDialog.getOpenFileName(gui_instance, "Audio-Datei wählen", "", AUDIO_FILTER)
+    filename, _ = QFileDialog.getOpenFileName(gui_instance, "Select Audio File", "", AUDIO_FILTER)
     if filename:
         gui_instance.input_path_edit.setText(filename)
 
 
 def browse_directory(gui_instance):
     """Browse for directory."""
-    directory = QFileDialog.getExistingDirectory(gui_instance, "Ordner mit Audio-Dateien wählen")
+    directory = QFileDialog.getExistingDirectory(gui_instance, "Select Folder with Audio Files")
     if directory:
         gui_instance.input_path_edit.setText(directory)
 
@@ -144,7 +144,7 @@ def browse_directory(gui_instance):
 def browse_output(gui_instance):
     """Browse for output directory."""
     current = gui_instance.output_dir_edit.text().strip() or str(Path.cwd())
-    directory = QFileDialog.getExistingDirectory(gui_instance, "Ausgabe-Ordner wählen", current)
+    directory = QFileDialog.getExistingDirectory(gui_instance, "Select Output Folder", current)
     if directory:
         gui_instance.output_dir_edit.setText(directory)
 
@@ -152,6 +152,6 @@ def browse_output(gui_instance):
 def browse_segments(gui_instance):
     """Browse for segments directory."""
     current = gui_instance.segments_dir_edit.text().strip() or str(Path.cwd())
-    directory = QFileDialog.getExistingDirectory(gui_instance, "Segment-Ordner wählen", current)
+    directory = QFileDialog.getExistingDirectory(gui_instance, "Select Segments Folder", current)
     if directory:
         gui_instance.segments_dir_edit.setText(directory)

@@ -22,7 +22,6 @@ from .constants import (
     DEFAULT_SEGMENT_LENGTH,
     DEFAULT_SUMMARY_MODEL,
     DEFAULT_SUMMARY_PROMPT,
-    DEFAULT_SUMMARY_TEMPERATURE,
     DEFAULT_TEMPERATURE,
 )
 from .diarizer import format_diarized_transcript, to_data_url
@@ -130,16 +129,16 @@ class AudioTranscriber:
             if known_speaker_names:
                 logger.info(f"Known speakers: {', '.join(known_speaker_names)}")
 
-        # Check if already processed
-        # Include original extension in output name to avoid collisions
-        # e.g., test.mp3 -> test_mp3_full.text, test.wav -> test_wav_full.text
+        # Clean file stem (remove original extensions if present)
+        # 26.02.2026 20.03.mp3 -> 26.02.2026 20.03
         file_stem = file_path.stem
-        file_ext = file_path.suffix.lstrip(".")  # Remove leading dot
-        output_filename = (
-            f"{file_stem}_{file_ext}_full.{response_format}"
-            if file_ext
-            else f"{file_stem}_full.{response_format}"
-        )
+        
+        # Ensure output directories use subfolders based on file name early
+        output_dir = output_dir / file_stem
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Check if already processed
+        output_filename = f"{file_stem}_full.{response_format}"
         output_file = output_dir / output_filename
 
         if skip_existing and output_file.exists():
@@ -155,8 +154,9 @@ class AudioTranscriber:
 
         logger.info(f"Duration: {format_duration(duration_seconds)}")
 
-        # Use separate segments directory if provided, otherwise use output_dir
-        seg_dir = segments_dir if segments_dir is not None else output_dir
+        # Use separate segments directory if provided, otherwise use parent of output_dir
+        seg_dir = segments_dir if segments_dir is not None else output_dir.parent.parent / "segments"
+        seg_dir = seg_dir / file_stem
 
         # Create segments
         try:
@@ -191,6 +191,7 @@ class AudioTranscriber:
                 speaker_references = None
 
         # Transcribe segments
+        # Individual segment transcriptions always go into the subfolder
         transcriptions, failed_count = self._transcribe_segments(
             segment_files=segment_files,
             language=detected_language,
@@ -200,7 +201,7 @@ class AudioTranscriber:
             concurrency=concurrency,
             output_dir=output_dir if save_segment_transcriptions else None,
             file_stem=file_stem,
-            file_ext=file_ext,
+            file_ext="", # Extension handled in stem for folder
             effective_model=effective_model,
             enable_diarization=enable_diarization,
             num_speakers=num_speakers,
@@ -229,18 +230,13 @@ class AudioTranscriber:
             return {"file": str(file_path), "status": "error", "error": f"Merge failed: {e}"}
 
         # Save full transcription
-        output_dir.mkdir(parents=True, exist_ok=True)
         try:
             output_file.write_text(merged_text, encoding="utf-8")
-            logger.info(f"Saved transcription: {output_file.name}")
+            logger.info(f"Saved full transcription: {output_file.name}")
 
             # If diarization is enabled, also save a human-readable version
             if enable_diarization and effective_format == "diarized_json":
-                readable_filename = (
-                    f"{file_stem}_{file_ext}_full_readable.txt"
-                    if file_ext
-                    else f"{file_stem}_full_readable.txt"
-                )
+                readable_filename = f"{file_stem}_full_readable.txt"
                 readable_file = output_dir / readable_filename
 
                 try:
@@ -315,21 +311,8 @@ class AudioTranscriber:
     ) -> Tuple[List[str], int]:
         """
         Transcribe segments in parallel.
-
-        Args:
-            output_dir: If provided, save individual segment transcriptions
-            file_stem: Base filename for segment transcriptions
-            file_ext: File extension for segment transcriptions
-            effective_model: Model to use (may be overridden for diarization)
-            enable_diarization: Whether diarization is enabled
-            num_speakers: Expected number of speakers
-            known_speaker_names: List of known speaker names
-            speaker_references: List of data URLs for speaker references
-
-        Returns:
-            Tuple of (transcription_list, failed_count)
         """
-        transcriptions: List[Optional[str]] = [None] * len(segment_files)  # Preserve order
+        transcriptions: List[Optional[str]] = [None] * len(segment_files)
         failed_count = 0
 
         logger.info(f"Transcribing {len(segment_files)} segments (concurrency: {concurrency})...")
@@ -352,7 +335,7 @@ class AudioTranscriber:
                     file_stem=file_stem,
                     file_ext=file_ext,
                     segment_index=i,
-                    skip_existing=True,  # Always try to skip if transcription exists
+                    skip_existing=True,
                 ): i
                 for i, seg_file in enumerate(segment_files)
             }
@@ -365,7 +348,6 @@ class AudioTranscriber:
                         if result:
                             transcriptions[index] = result
 
-                            # Save individual segment transcription if output_dir is provided
                             if output_dir:
                                 segment_num = index + 1
                                 if file_ext:
@@ -395,9 +377,7 @@ class AudioTranscriber:
 
                     pbar.update(1)
 
-        # Filter out None values while preserving order
         valid_transcriptions = [t for t in transcriptions if t is not None]
-
         return valid_transcriptions, failed_count
 
     def _transcribe_segment(
@@ -420,25 +400,8 @@ class AudioTranscriber:
         skip_existing: bool = False,
     ) -> Optional[str]:
         """
-        Transcribe a single segment with retry logic and optional diarization.
-
-        Args:
-            segment_file: Path to audio segment file
-            language: Language code
-            response_format: Response format
-            temperature: Model temperature
-            prompt: Context prompt
-            effective_model: Model to use (may be diarization model)
-            enable_diarization: Whether to use diarization
-            num_speakers: Expected number of speakers
-            known_speaker_names: List of known speaker names
-            speaker_references: List of data URLs for speaker references
-            max_retries: Maximum retry attempts
-
-        Returns:
-            Transcription string or None if failed
+        Transcribe a single segment with retry logic.
         """
-        # Check for existing transcription if output_dir is provided
         if skip_existing and output_dir:
             segment_num = segment_index + 1
             if file_ext:
@@ -453,7 +416,7 @@ class AudioTranscriber:
                 try:
                     cached_text = segment_output_file.read_text(encoding="utf-8")
                     if cached_text.strip():
-                        logger.debug(f"Using cached transcription for: {segment_filename}")
+                        logger.info(f"Using cached transcription for: {segment_filename}")
                         return cached_text
                 except Exception as e:
                     logger.warning(f"Failed to read cached transcription {segment_filename}: {e}")
@@ -476,32 +439,23 @@ class AudioTranscriber:
                     if prompt:
                         kwargs["prompt"] = prompt
 
-                    # Add diarization-specific parameters
                     if enable_diarization:
                         kwargs["chunking_strategy"] = "auto"
-
-                        # Build extra_body for diarization parameters
                         extra_body: Dict[str, Any] = {}
-
                         if num_speakers:
                             extra_body["num_speakers"] = num_speakers
-
                         if known_speaker_names:
                             extra_body["known_speaker_names"] = known_speaker_names
-
                         if speaker_references:
                             extra_body["known_speaker_references"] = speaker_references
-
                         if extra_body:
                             kwargs["extra_body"] = extra_body
 
                     response = self.client.audio.transcriptions.create(**kwargs)
 
-                # Handle different response types
                 if response_format == "text":
                     return response if isinstance(response, str) else str(response)
                 elif response_format == "diarized_json":
-                    # For diarized_json, we get the raw JSON response
                     if hasattr(response, "model_dump_json"):
                         return str(response.model_dump_json())
                     else:
@@ -525,7 +479,6 @@ class AudioTranscriber:
                 else:
                     logger.error(f"Failed after {max_retries} retries: {segment_file.name}")
                     return None
-
             except Exception as e:
                 logger.error(f"Unexpected error transcribing {segment_file.name}: {e}")
                 return None
@@ -555,28 +508,15 @@ class AudioTranscriber:
         summary_dir: Path,
         summary_model: str = DEFAULT_SUMMARY_MODEL,
         summary_prompt: str = DEFAULT_SUMMARY_PROMPT,
-        summary_temperature: float = DEFAULT_SUMMARY_TEMPERATURE,
         skip_existing: bool = True,
     ) -> Dict[str, Any]:
         """
         Generate a summary of a transcription file.
-
-        Args:
-            transcription_file: Path to transcription file
-            summary_dir: Directory for summary output
-            summary_model: Model to use for summarization (e.g., 'gpt-4o-mini')
-            summary_prompt: Custom prompt for summary generation
-            summary_temperature: Temperature for summary generation
-            skip_existing: Skip if summary file already exists
-
-        Returns:
-            Dictionary with summary results and metadata
         """
         logger.info(f"\n{'=' * 70}")
         logger.info(f"Generating summary for: {transcription_file.name}")
         logger.info(f"{'=' * 70}")
 
-        # Check if transcription file exists
         if not transcription_file.exists():
             logger.error(f"Transcription file not found: {transcription_file}")
             return {
@@ -585,13 +525,23 @@ class AudioTranscriber:
                 "error": "Transcription file not found",
             }
 
-        # Determine summary output filename
-        # e.g., test_mp3_full.text -> test_mp3_summary.md
+        # Use folder stem (assumed clean from transcribe_file or manually set)
         file_stem = transcription_file.stem.replace("_full", "")
+        # Further clean up stem if it contains original extension
+        if "_" in file_stem:
+            # e.g., 26.02.2026 20.03_mp3 -> 26.02.2026 20.03
+            parts = file_stem.split("_")
+            if len(parts) > 1:
+                file_stem = "_".join(parts[:-1])
+
+        # Use parent folder name as the source of truth if possible
+        if transcription_file.parent.name not in (".", "transcriptions", "output"):
+            file_stem = transcription_file.parent.name
+
+        summary_dir = summary_dir / file_stem
         summary_filename = f"{file_stem}_summary.md"
         summary_file = summary_dir / summary_filename
 
-        # Check if summary already exists
         if skip_existing and summary_file.exists():
             logger.info(f"Summary already exists, skipping: {summary_file.name}")
             return {
@@ -600,7 +550,6 @@ class AudioTranscriber:
                 "summary_file": str(summary_file),
             }
 
-        # Read transcription content
         try:
             transcription_text = transcription_file.read_text(encoding="utf-8")
         except Exception as e:
@@ -619,7 +568,6 @@ class AudioTranscriber:
                 "error": "Empty transcription",
             }
 
-        # Generate summary using chat completion API
         logger.info(f"Using model: {summary_model}")
         logger.info(f"Transcription length: {len(transcription_text)} characters")
 
@@ -627,20 +575,11 @@ class AudioTranscriber:
             response = self.client.chat.completions.create(
                 model=summary_model,
                 messages=[
-                    {
-                        "role": "system",
-                        "content": summary_prompt,
-                    },
-                    {
-                        "role": "user",
-                        "content": transcription_text,
-                    },
+                    {"role": "system", "content": summary_prompt},
+                    {"role": "user", "content": transcription_text},
                 ],
-                temperature=summary_temperature,
             )
-
             summary_text = response.choices[0].message.content
-
             if not summary_text:
                 logger.error("Summary generation returned empty content")
                 return {
@@ -648,7 +587,6 @@ class AudioTranscriber:
                     "status": "error",
                     "error": "Empty summary returned",
                 }
-
         except Exception as e:
             logger.error(f"Failed to generate summary: {e}")
             return {
@@ -657,7 +595,6 @@ class AudioTranscriber:
                 "error": f"Summary generation failed: {e}",
             }
 
-        # Save summary to file
         summary_dir.mkdir(parents=True, exist_ok=True)
         try:
             summary_file.write_text(summary_text, encoding="utf-8")

@@ -29,7 +29,6 @@ from ..constants import (
     DEFAULT_SEGMENT_LENGTH,
     DEFAULT_SUMMARY_MODEL,
     DEFAULT_SUMMARY_PROMPT,
-    DEFAULT_SUMMARY_TEMPERATURE,
     DEFAULT_TEMPERATURE,
     ENV_PREFIX,
     get_model_price_per_minute,
@@ -79,7 +78,6 @@ class GUIConfig:
     summary_dir: str
     summary_model: str
     summary_prompt: str
-    summary_temperature: float
     export_md: bool
     export_latex: bool
     export_dir: str
@@ -132,7 +130,7 @@ class AudioTranscriberGUI(QMainWindow):
         self.verbose_default = False
 
         self.enable_diarization_default = False
-        self.num_speakers_default = 2
+        self.num_speakers_default = 0  # 0 means Auto-detect
         self.known_speaker_names: list[str] = []
         self.known_speaker_references: list[str] = []
 
@@ -141,9 +139,6 @@ class AudioTranscriberGUI(QMainWindow):
         self.summary_model_default = env_str(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL) or ""
         self.summary_prompt_default = (
             env_str(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT) or ""
-        )
-        self.summary_temperature_default = env_float(
-            f"{ENV_PREFIX}SUMMARY_TEMPERATURE", DEFAULT_SUMMARY_TEMPERATURE
         )
 
         self.export_dir_default = env_str(f"{ENV_PREFIX}EXPORT_DIR", "./exports") or ""
@@ -242,14 +237,13 @@ class AudioTranscriberGUI(QMainWindow):
             skip_existing=self.skip_existing_check.isChecked(),
             verbose=self.verbose_check.isChecked(),
             enable_diarization=self.enable_diarization_check.isChecked(),
-            num_speakers=self.num_speakers_spin.value(),
+            num_speakers=self.num_speakers_spin.value() or None,  # Treat 0 as None for Auto
             known_speaker_names=known_names,
             known_speaker_references=known_refs,
             summarize=self.summarize_check.isChecked(),
             summary_dir=self.summary_dir_edit.text().strip(),
             summary_model=self.summary_model_edit.text().strip(),
             summary_prompt=self.summary_prompt_edit.toPlainText().strip(),
-            summary_temperature=float(self.summary_temperature_spin.value()),
             export_md=self.export_md_check.isChecked(),
             export_latex=self.export_latex_check.isChecked(),
             export_dir=self.export_dir_edit.text().strip(),
@@ -258,15 +252,15 @@ class AudioTranscriberGUI(QMainWindow):
     def validate_inputs(self, config: GUIConfig) -> bool:
         """Validate all inputs before starting."""
         if not config.input_path:
-            self._show_dialog("error", "Fehler", "Bitte wählen Sie eine Audio-Datei oder einen Ordner aus.")
+            self._show_dialog("error", "Error", "Please select an audio file or directory.")
             return False
 
         if not config.api_key:
-            self._show_dialog("error", "Fehler", "Bitte geben Sie einen API Key ein.")
+            self._show_dialog("error", "Error", "Please enter an API Key.")
             return False
 
         if not Path(config.input_path).exists():
-            self._show_dialog("error", "Fehler", f"Pfad existiert nicht: {config.input_path}")
+            self._show_dialog("error", "Error", f"Path does not exist: {config.input_path}")
             return False
 
         return True
@@ -282,23 +276,23 @@ class AudioTranscriberGUI(QMainWindow):
         scrollbar.setValue(scrollbar.maximum())
 
     @Slot(object)
-    def _apply_progress_summary(self, summary: object):
+    def _apply_progress_summary(self, summary: dict):
         """Update progress UI with summary dictionary."""
         if not isinstance(summary, dict):
             return
 
         self.eta_label.setText(f"ETA: {summary['time']['eta_formatted']}")
-        self.throughput_label.setText(f"Durchsatz: {summary['throughput']['formatted']}")
+        self.throughput_label.setText(f"Throughput: {summary['throughput']['formatted']}")
 
         current_cost = float(summary["cost"]["current"])
         total_cost = float(summary["cost"]["total_estimated"])
-        self.cost_label.setText(f"Kosten: ${current_cost:.4f} / ${total_cost:.4f}")
+        self.cost_label.setText(f"Cost: ${current_cost:.4f} / ${total_cost:.4f}")
 
     @Slot()
     def _reset_progress_ui(self):
         self.eta_label.setText("ETA: --")
-        self.throughput_label.setText("Durchsatz: --")
-        self.cost_label.setText("Kosten: $0.0000")
+        self.throughput_label.setText("Throughput: --")
+        self.cost_label.setText("Cost: $0.0000")
 
     @Slot(float)
     def _set_progress_percent(self, pct: float):
@@ -326,10 +320,10 @@ class AudioTranscriberGUI(QMainWindow):
             return
 
         if self.is_processing:
-            self._show_dialog("warning", "Warnung", "Transkription läuft bereits!")
+            self._show_dialog("warning", "Warning", "Transcription already in progress!")
             return
 
-        setup_logging(config.verbose)
+        setup_logging(True)  # Force debug logging as requested
 
         self.is_processing = True
         self.signals.processing_state.emit(True)
@@ -349,21 +343,21 @@ class AudioTranscriberGUI(QMainWindow):
             self.signals.progress_reset.emit()
 
             self.log_message("=" * 70)
-            self.log_message("Audio Transcriber gestartet")
+            self.log_message("Audio Transcriber started")
             self.log_message("=" * 70)
 
             input_path = Path(config.input_path)
             try:
                 audio_files = find_audio_files(input_path)
-                self.log_message(f"📁 Gefunden: {len(audio_files)} Audio-Datei(en)")
+                self.log_message(f"📁 Found: {len(audio_files)} audio file(s)")
             except FileNotFoundError as error:
-                self.log_message(f"❌ Fehler: {error}")
-                self.signals.dialog.emit("error", "Fehler", str(error))
+                self.log_message(f"❌ Error: {error}")
+                self.signals.dialog.emit("error", "Error", str(error))
                 return
 
             if not audio_files:
-                self.log_message("❌ Keine Audio-Dateien gefunden!")
-                self.signals.dialog.emit("warning", "Warnung", "Keine Audio-Dateien gefunden!")
+                self.log_message("❌ No audio files found!")
+                self.signals.dialog.emit("warning", "Warning", "No audio files found!")
                 return
 
             transcriber = AudioTranscriber(
@@ -377,7 +371,7 @@ class AudioTranscriberGUI(QMainWindow):
             progress.start()
             progress.set_total_files(len(audio_files))
 
-            self.log_message("\n📊 Analysiere Audio-Dateien...")
+            self.log_message("\n📊 Analyzing audio files...")
             total_duration_seconds = 0.0
             for audio_file in audio_files:
                 try:
@@ -388,8 +382,8 @@ class AudioTranscriberGUI(QMainWindow):
 
             if total_duration_seconds > 0:
                 progress.set_total_duration(total_duration_seconds / 60.0)
-                self.log_message(f"📁 Gesamtdauer: {format_duration(total_duration_seconds)}")
-                self.log_message(f"💰 Geschätzte Kosten: ${progress.stats.total_cost:.4f}\n")
+                self.log_message(f"📁 Total duration: {format_duration(total_duration_seconds)}")
+                self.log_message(f"💰 Estimated cost: ${progress.stats.total_cost:.4f}\n")
                 self.signals.progress_summary.emit(progress.get_summary())
 
             output_dir = Path(config.output_dir)
@@ -397,10 +391,10 @@ class AudioTranscriberGUI(QMainWindow):
 
             for index, audio_file in enumerate(audio_files, 1):
                 if not self.is_processing:
-                    self.log_message("\n⏹ Transkription abgebrochen!")
+                    self.log_message("\n⏹ Transcription cancelled!")
                     break
 
-                self.log_message(f"\n[{index}/{len(audio_files)}] Verarbeite: {audio_file.name}")
+                self.log_message(f"\n[{index}/{len(audio_files)}] Processing: {audio_file.name}")
 
                 try:
                     result = transcriber.transcribe_file(
@@ -433,42 +427,39 @@ class AudioTranscriberGUI(QMainWindow):
                             duration_min = result.get("duration_seconds", 0) / 60.0
                             num_segments = result.get("segments", 0)
                             progress.update_file_completed(duration_min, num_segments)
-                            self.log_message(f"✅ Erfolgreich: {result['output']}")
+                            self.log_message(f"✅ Success: {result['output']}")
                         else:
-                            self.log_message(f"⊘ Transkription übersprungen (existiert bereits): {result['output']}")
-                            # For progress purposes, treat skipped as completed if it exists
+                            self.log_message(f"⊘ Transcription skipped (already exists): {result['output']}")
                             successful += 1
                             progress.update_file_skipped()
 
                         if config.summarize:
-                            self.log_message("📝 Erstelle Zusammenfassung...")
+                            self.log_message("📝 Creating summary...")
                             try:
                                 summary_result = transcriber.summarize_transcription(
                                     transcription_file=Path(result["output"]),
                                     summary_dir=Path(config.summary_dir),
                                     summary_model=config.summary_model,
                                     summary_prompt=config.summary_prompt,
-                                    summary_temperature=config.summary_temperature,
                                     skip_existing=config.skip_existing,
                                 )
                                 if summary_result["status"] == "success":
                                     self.log_message(
-                                        f"✅ Summary erstellt: {summary_result['summary_file']}"
+                                        f"✅ Summary created: {summary_result['summary_file']}"
                                     )
                                 elif summary_result["status"] == "skipped":
-                                    self.log_message("⊘ Summary übersprungen: bereits vorhanden")
+                                    self.log_message("⊘ Summary skipped: already exists")
                                 else:
                                     self.log_message(
-                                        "⚠️ Summary-Fehler: "
-                                        f"{summary_result.get('error', 'Unbekannt')}"
+                                        f"⚠️ Summary error: {summary_result.get('error', 'Unknown')}"
                                     )
                             except Exception as error:
-                                self.log_message(f"⚠️ Summary-Ausnahme: {error}")
+                                self.log_message(f"⚠️ Summary exception: {error}")
 
                         if any([config.export_md, config.export_latex]):
                             from ..exporter import TranscriptionExporter
 
-                            self.log_message("📄 Exportiere zu zusätzlichen Formaten...")
+                            self.log_message("📄 Exporting to additional formats...")
                             exporter = TranscriptionExporter()
                             export_dir = Path(config.export_dir)
 
@@ -492,7 +483,7 @@ class AudioTranscriberGUI(QMainWindow):
                                     if export_result.get("status") == "success":
                                         self.log_message(f"  ✅ Markdown: {export_file.name}")
                                 except Exception as error:
-                                    self.log_message(f"  ⚠️  Markdown Export fehlgeschlagen: {error}")
+                                    self.log_message(f"  ⚠️  Markdown export failed: {error}")
 
                             if config.export_latex:
                                 try:
@@ -506,56 +497,56 @@ class AudioTranscriberGUI(QMainWindow):
                                     if export_result.get("status") == "success":
                                         self.log_message(f"  ✅ LaTeX: {export_file.name}")
                                 except Exception as error:
-                                    self.log_message(f"  ⚠️  LaTeX Export fehlgeschlagen: {error}")
+                                    self.log_message(f"  ⚠️  LaTeX export failed: {error}")
 
                     elif result.get("status") == "error":
                         failed += 1
                         progress.update_file_failed()
-                        self.log_message(f"❌ Fehler: {result.get('error', 'Unbekannt')}")
+                        self.log_message(f"❌ Error: {result.get('error', 'Unknown')}")
 
                     self.signals.progress_summary.emit(progress.get_summary())
 
                 except Exception as error:
                     failed += 1
                     progress.update_file_failed()
-                    self.log_message(f"❌ Ausnahme: {error}")
+                    self.log_message(f"❌ Exception: {error}")
                     self.signals.progress_summary.emit(progress.get_summary())
 
             self.signals.progress_percent.emit(100.0)
 
             self.log_message("\n" + "=" * 70)
-            self.log_message("ZUSAMMENFASSUNG")
+            self.log_message("SUMMARY")
             self.log_message("=" * 70)
-            self.log_message(f"✅ Erfolgreich: {successful}")
-            self.log_message(f"❌ Fehlgeschlagen: {failed}")
+            self.log_message(f"✅ Successful: {successful}")
+            self.log_message(f"❌ Failed:     {failed}")
 
             if progress is not None:
                 summary = progress.get_summary()
-                self.log_message(f"\n⏱ Vergangene Zeit: {summary['time']['elapsed_formatted']}")
+                self.log_message(f"\n⏱ Elapsed time: {summary['time']['elapsed_formatted']}")
                 if summary["throughput"]["value"]:
-                    self.log_message(f"📊 Durchsatz: {summary['throughput']['formatted']}")
-                self.log_message(f"💰 Endkosten: ${summary['cost']['current']:.4f}")
+                    self.log_message(f"📊 Throughput: {summary['throughput']['formatted']}")
+                self.log_message(f"💰 Final cost: ${summary['cost']['current']:.4f}")
             self.log_message("=" * 70)
 
             if failed == 0 and successful > 0:
                 self.signals.dialog.emit(
                     "info",
-                    "Fertig",
+                    "Finished",
                     (
-                        "Transkription abgeschlossen!\n"
-                        f"{successful} Datei(en) erfolgreich verarbeitet."
+                        "Transcription completed!\n"
+                        f"{successful} file(s) processed successfully."
                     ),
                 )
             elif failed > 0:
                 self.signals.dialog.emit(
                     "warning",
-                    "Fertig",
-                    f"Transkription abgeschlossen mit {failed} Fehler(n).",
+                    "Finished",
+                    f"Transcription completed with {failed} error(s).",
                 )
 
         except Exception as error:
-            self.log_message(f"\n❌ Kritischer Fehler: {error}")
-            self.signals.dialog.emit("error", "Fehler", f"Kritischer Fehler:\n{error}")
+            self.log_message(f"\n❌ Critical Error: {error}")
+            self.signals.dialog.emit("error", "Error", f"Critical Error:\n{error}")
 
         finally:
             self.is_processing = False
@@ -565,7 +556,7 @@ class AudioTranscriberGUI(QMainWindow):
         """Stop transcription process."""
         if self.is_processing:
             self.is_processing = False
-            self.log_message("\n⏹ Stoppe Transkription...")
+            self.log_message("\n⏹ Stopping transcription...")
 
 
 def main() -> int:

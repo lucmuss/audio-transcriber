@@ -244,12 +244,6 @@ For more information: https://github.com/lucmuss/audio-transcriber
         default=env_str(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT),
         help="Custom prompt for summary generation",
     )
-    summary_group.add_argument(
-        "--summary-temperature",
-        type=float,
-        default=env_float(f"{ENV_PREFIX}SUMMARY_TEMPERATURE", DEFAULT_SUMMARY_TEMPERATURE),
-        help=f"Temperature for summary generation (default: {DEFAULT_SUMMARY_TEMPERATURE})",
-    )
 
     # Export parameters
     export_group = parser.add_argument_group("export parameters")
@@ -523,7 +517,6 @@ def main() -> int:
                     summary_dir=Path(args.summary_dir),
                     summary_model=args.summary_model,
                     summary_prompt=args.summary_prompt,
-                    summary_temperature=args.summary_temperature,
                     skip_existing=args.skip_existing,
                 )
                 result["summary"] = summary_result
