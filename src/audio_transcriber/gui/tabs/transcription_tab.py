@@ -44,7 +44,7 @@ def create_transcription_tab(gui_instance) -> QWidget:
     gui_instance.temperature_spin.setRange(0.0, 1.0)
     gui_instance.temperature_spin.setSingleStep(0.1)
     gui_instance.temperature_spin.setDecimals(2)
-    gui_instance.temperature_spin.setValue(gui_instance.temperature_default)
+    gui_instance.temperature_spin.setValue(0.9)
     settings_layout.addWidget(gui_instance.temperature_spin, 2, 1, alignment=Qt.AlignLeft)
 
     settings_layout.addWidget(QLabel("Context Prompt:"), 3, 0, alignment=Qt.AlignTop)

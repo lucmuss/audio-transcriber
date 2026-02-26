@@ -22,6 +22,7 @@ from .constants import (
     DEFAULT_SEGMENT_LENGTH,
     DEFAULT_SUMMARY_MODEL,
     DEFAULT_SUMMARY_PROMPT,
+    DEFAULT_SUMMARY_TEMPERATURE,
     DEFAULT_TEMPERATURE,
 )
 from .diarizer import format_diarized_transcript, to_data_url
@@ -160,7 +161,7 @@ class AudioTranscriber:
         # Create segments
         try:
             segment_files = self.segmenter.segment_audio(
-                file_path, segment_length, overlap, seg_dir
+                file_path, segment_length, overlap, seg_dir, skip_existing=skip_existing
             )
         except Exception as e:
             logger.error(f"Segmentation failed: {e}")
@@ -347,6 +348,11 @@ class AudioTranscriber:
                     num_speakers=num_speakers,
                     known_speaker_names=known_speaker_names,
                     speaker_references=speaker_references,
+                    output_dir=output_dir,
+                    file_stem=file_stem,
+                    file_ext=file_ext,
+                    segment_index=i,
+                    skip_existing=True,  # Always try to skip if transcription exists
                 ): i
                 for i, seg_file in enumerate(segment_files)
             }
@@ -407,6 +413,11 @@ class AudioTranscriber:
         known_speaker_names: Optional[List[str]] = None,
         speaker_references: Optional[List[str]] = None,
         max_retries: int = DEFAULT_MAX_RETRIES,
+        output_dir: Optional[Path] = None,
+        file_stem: str = "",
+        file_ext: str = "",
+        segment_index: int = 0,
+        skip_existing: bool = False,
     ) -> Optional[str]:
         """
         Transcribe a single segment with retry logic and optional diarization.
@@ -427,6 +438,26 @@ class AudioTranscriber:
         Returns:
             Transcription string or None if failed
         """
+        # Check for existing transcription if output_dir is provided
+        if skip_existing and output_dir:
+            segment_num = segment_index + 1
+            if file_ext:
+                segment_filename = (
+                    f"{file_stem}_{file_ext}_segment_{segment_num:03d}.{response_format}"
+                )
+            else:
+                segment_filename = f"{file_stem}_segment_{segment_num:03d}.{response_format}"
+            segment_output_file = output_dir / segment_filename
+
+            if segment_output_file.exists():
+                try:
+                    cached_text = segment_output_file.read_text(encoding="utf-8")
+                    if cached_text.strip():
+                        logger.debug(f"Using cached transcription for: {segment_filename}")
+                        return cached_text
+                except Exception as e:
+                    logger.warning(f"Failed to read cached transcription {segment_filename}: {e}")
+
         retry_count = 0
         backoff_seconds = 1
 
@@ -524,6 +555,7 @@ class AudioTranscriber:
         summary_dir: Path,
         summary_model: str = DEFAULT_SUMMARY_MODEL,
         summary_prompt: str = DEFAULT_SUMMARY_PROMPT,
+        summary_temperature: float = DEFAULT_SUMMARY_TEMPERATURE,
         skip_existing: bool = True,
     ) -> Dict[str, Any]:
         """
@@ -534,6 +566,7 @@ class AudioTranscriber:
             summary_dir: Directory for summary output
             summary_model: Model to use for summarization (e.g., 'gpt-4o-mini')
             summary_prompt: Custom prompt for summary generation
+            summary_temperature: Temperature for summary generation
             skip_existing: Skip if summary file already exists
 
         Returns:
@@ -553,9 +586,9 @@ class AudioTranscriber:
             }
 
         # Determine summary output filename
-        # e.g., test_mp3_full.text -> test_mp3_summary.txt
+        # e.g., test_mp3_full.text -> test_mp3_summary.md
         file_stem = transcription_file.stem.replace("_full", "")
-        summary_filename = f"{file_stem}_summary.txt"
+        summary_filename = f"{file_stem}_summary.md"
         summary_file = summary_dir / summary_filename
 
         # Check if summary already exists
@@ -603,7 +636,7 @@ class AudioTranscriber:
                         "content": transcription_text,
                     },
                 ],
-                temperature=0.3,  # Slightly creative but mostly factual
+                temperature=summary_temperature,
             )
 
             summary_text = response.choices[0].message.content

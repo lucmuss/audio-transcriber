@@ -89,21 +89,35 @@ def estimate_cost(duration_minutes: float, price_per_minute: float = 0.0001) -> 
     return duration_minutes * price_per_minute
 
 
-def setup_logging(verbose: bool = False) -> None:
+def setup_logging(verbose: bool = True) -> None:
     """
     Configure logging for the application.
 
     Args:
-        verbose: Enable debug logging if True
+        verbose: Enable debug logging if True (Always True as requested)
     """
-    log_level = logging.DEBUG if verbose else logging.INFO
+    # Always use DEBUG level for maximum visibility as requested
+    log_level = logging.DEBUG
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-    logging.basicConfig(
-        level=log_level,
-        format=log_format,
-        handlers=[logging.StreamHandler()],
-    )
+    # Configure root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(log_level)
+    
+    # Remove existing handlers to avoid duplicates
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
+        
+    # Add console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter(log_format))
+    root_logger.addHandler(console_handler)
+    
+    # Ensure specific modules are also at DEBUG
+    logging.getLogger("audio_transcriber").setLevel(log_level)
+    # Silent noisy third party loggers a bit but keep our app chatty
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("pydub").setLevel(logging.WARNING)
 
 
 def validate_segment_params(

@@ -18,7 +18,7 @@ def create_progress_section(gui_instance) -> tuple:
     Create bottom section with progress display and control buttons.
 
     Returns:
-        Tuple of (container, progress_bar, progress_label, eta_label, throughput_label,
+        Tuple of (container, eta_label, throughput_label,
         cost_label, log_text, start_button, stop_button)
     """
     container = QWidget()
@@ -26,22 +26,9 @@ def create_progress_section(gui_instance) -> tuple:
     root_layout.setContentsMargins(0, 0, 0, 0)
     root_layout.setSpacing(8)
 
-    progress_group = QGroupBox("Progress")
+    progress_group = QGroupBox("Status")
     progress_layout = QVBoxLayout(progress_group)
     progress_layout.setSpacing(8)
-
-    progress_row = QHBoxLayout()
-    progress_bar = QProgressBar()
-    progress_bar.setRange(0, 100)
-    progress_bar.setValue(0)
-    progress_bar.setTextVisible(False)
-    progress_row.addWidget(progress_bar, stretch=1)
-
-    progress_label = QLabel("0%")
-    progress_label.setMinimumWidth(60)
-    progress_row.addWidget(progress_label)
-
-    progress_layout.addLayout(progress_row)
 
     stats_row = QHBoxLayout()
     eta_label = QLabel("ETA: --")
@@ -94,8 +81,6 @@ def create_progress_section(gui_instance) -> tuple:
 
     return (
         container,
-        progress_bar,
-        progress_label,
         eta_label,
         throughput_label,
         cost_label,

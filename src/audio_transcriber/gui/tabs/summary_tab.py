@@ -53,9 +53,19 @@ def create_summary_tab(gui_instance) -> QWidget:
     gui_instance.summary_prompt_edit.setMinimumHeight(120)
     settings_layout.addWidget(gui_instance.summary_prompt_edit, 2, 1, 1, 2)
 
-    summary_hint = QLabel("Beschreiben Sie, wie die Zusammenfassung erstellt werden soll")
+    summary_hint = QLabel("Beschreiben Sie, wie die Zusammenfassung erstellt werden soll (Markdown wird standardmäßig verwendet)")
     summary_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
     settings_layout.addWidget(summary_hint, 3, 1, 1, 2)
+
+    from PySide6.QtWidgets import QDoubleSpinBox
+
+    settings_layout.addWidget(QLabel("Summary-Temperature:"), 4, 0)
+    gui_instance.summary_temperature_spin = QDoubleSpinBox()
+    gui_instance.summary_temperature_spin.setRange(0.0, 2.0)
+    gui_instance.summary_temperature_spin.setSingleStep(0.1)
+    gui_instance.summary_temperature_spin.setDecimals(1)
+    gui_instance.summary_temperature_spin.setValue(gui_instance.summary_temperature_default)
+    settings_layout.addWidget(gui_instance.summary_temperature_spin, 4, 1, alignment=Qt.AlignLeft)
 
     settings_layout.setColumnStretch(1, 1)
     layout.addWidget(settings_group)

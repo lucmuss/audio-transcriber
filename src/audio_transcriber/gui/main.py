@@ -29,6 +29,7 @@ from ..constants import (
     DEFAULT_SEGMENT_LENGTH,
     DEFAULT_SUMMARY_MODEL,
     DEFAULT_SUMMARY_PROMPT,
+    DEFAULT_SUMMARY_TEMPERATURE,
     DEFAULT_TEMPERATURE,
     ENV_PREFIX,
     get_model_price_per_minute,
@@ -42,7 +43,6 @@ from .tabs import (
     create_diarization_tab,
     create_export_tab,
     create_main_tab,
-    create_preview_tab,
     create_summary_tab,
     create_transcription_tab,
 )
@@ -79,12 +79,10 @@ class GUIConfig:
     summary_dir: str
     summary_model: str
     summary_prompt: str
-    export_docx: bool
+    summary_temperature: float
     export_md: bool
     export_latex: bool
     export_dir: str
-    export_title: str
-    export_author: str
 
 
 class GUISignals(QObject):
@@ -130,7 +128,7 @@ class AudioTranscriberGUI(QMainWindow):
 
         # Updated defaults to match constants
         self.keep_segments_default = True
-        self.skip_existing_default = False
+        self.skip_existing_default = True
         self.verbose_default = False
 
         self.enable_diarization_default = False
@@ -144,10 +142,11 @@ class AudioTranscriberGUI(QMainWindow):
         self.summary_prompt_default = (
             env_str(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT) or ""
         )
+        self.summary_temperature_default = env_float(
+            f"{ENV_PREFIX}SUMMARY_TEMPERATURE", DEFAULT_SUMMARY_TEMPERATURE
+        )
 
         self.export_dir_default = env_str(f"{ENV_PREFIX}EXPORT_DIR", "./exports") or ""
-        self.export_title_default = ""
-        self.export_author_default = ""
 
         # Processing state
         self.is_processing = False
@@ -187,7 +186,6 @@ class AudioTranscriberGUI(QMainWindow):
             ("Speakers", create_diarization_tab(self), QStyle.SP_FileDialogDetailedView),
             ("Export", create_export_tab(self), QStyle.SP_DialogSaveButton),
             ("Summary", create_summary_tab(self), QStyle.SP_FileDialogInfoView),
-            ("Preview", create_preview_tab(self), QStyle.SP_FileDialogContentsView),
         ]
         style = self.style()
         for title, widget, icon_id in tabs:
@@ -195,8 +193,6 @@ class AudioTranscriberGUI(QMainWindow):
 
         (
             progress_widget,
-            self.progress_bar,
-            self.progress_label,
             self.eta_label,
             self.throughput_label,
             self.cost_label,
@@ -253,12 +249,10 @@ class AudioTranscriberGUI(QMainWindow):
             summary_dir=self.summary_dir_edit.text().strip(),
             summary_model=self.summary_model_edit.text().strip(),
             summary_prompt=self.summary_prompt_edit.toPlainText().strip(),
-            export_docx=self.export_docx_check.isChecked(),
+            summary_temperature=float(self.summary_temperature_spin.value()),
             export_md=self.export_md_check.isChecked(),
             export_latex=self.export_latex_check.isChecked(),
             export_dir=self.export_dir_edit.text().strip(),
-            export_title=self.export_title_edit.text().strip(),
-            export_author=self.export_author_edit.text().strip(),
         )
 
     def validate_inputs(self, config: GUIConfig) -> bool:
@@ -293,10 +287,6 @@ class AudioTranscriberGUI(QMainWindow):
         if not isinstance(summary, dict):
             return
 
-        progress_pct = float(summary["files"]["progress_pct"])
-        self.progress_bar.setValue(int(round(progress_pct)))
-        self.progress_label.setText(f"{progress_pct:.1f}%")
-
         self.eta_label.setText(f"ETA: {summary['time']['eta_formatted']}")
         self.throughput_label.setText(f"Durchsatz: {summary['throughput']['formatted']}")
 
@@ -306,16 +296,14 @@ class AudioTranscriberGUI(QMainWindow):
 
     @Slot()
     def _reset_progress_ui(self):
-        self.progress_bar.setValue(0)
-        self.progress_label.setText("0%")
         self.eta_label.setText("ETA: --")
         self.throughput_label.setText("Durchsatz: --")
         self.cost_label.setText("Kosten: $0.0000")
 
     @Slot(float)
     def _set_progress_percent(self, pct: float):
-        self.progress_bar.setValue(int(round(pct)))
-        self.progress_label.setText(f"{pct:.1f}%")
+        # Progress percent slot kept for signal compatibility but does nothing UI-wise
+        pass
 
     @Slot(str, str, str)
     def _show_dialog(self, kind: str, title: str, message: str):
@@ -439,12 +427,18 @@ class AudioTranscriberGUI(QMainWindow):
                         ),
                     )
 
-                    if result.get("status") == "success":
-                        successful += 1
-                        duration_min = result.get("duration_seconds", 0) / 60.0
-                        num_segments = result.get("segments", 0)
-                        progress.update_file_completed(duration_min, num_segments)
-                        self.log_message(f"✅ Erfolgreich: {result['output']}")
+                    if result.get("status") in ("success", "skipped"):
+                        if result.get("status") == "success":
+                            successful += 1
+                            duration_min = result.get("duration_seconds", 0) / 60.0
+                            num_segments = result.get("segments", 0)
+                            progress.update_file_completed(duration_min, num_segments)
+                            self.log_message(f"✅ Erfolgreich: {result['output']}")
+                        else:
+                            self.log_message(f"⊘ Transkription übersprungen (existiert bereits): {result['output']}")
+                            # For progress purposes, treat skipped as completed if it exists
+                            successful += 1
+                            progress.update_file_skipped()
 
                         if config.summarize:
                             self.log_message("📝 Erstelle Zusammenfassung...")
@@ -454,6 +448,7 @@ class AudioTranscriberGUI(QMainWindow):
                                     summary_dir=Path(config.summary_dir),
                                     summary_model=config.summary_model,
                                     summary_prompt=config.summary_prompt,
+                                    summary_temperature=config.summary_temperature,
                                     skip_existing=config.skip_existing,
                                 )
                                 if summary_result["status"] == "success":
@@ -470,7 +465,7 @@ class AudioTranscriberGUI(QMainWindow):
                             except Exception as error:
                                 self.log_message(f"⚠️ Summary-Ausnahme: {error}")
 
-                        if any([config.export_docx, config.export_md, config.export_latex]):
+                        if any([config.export_md, config.export_latex]):
                             from ..exporter import TranscriptionExporter
 
                             self.log_message("📄 Exportiere zu zusätzlichen Formaten...")
@@ -478,27 +473,12 @@ class AudioTranscriberGUI(QMainWindow):
                             export_dir = Path(config.export_dir)
 
                             metadata = {
-                                "title": config.export_title or audio_file.stem,
-                                "author": config.export_author,
+                                "title": audio_file.stem,
                                 "date": datetime.now().strftime("%Y-%m-%d"),
                                 "duration": format_duration(result.get("duration_seconds", 0)),
                                 "language": result.get("language"),
                                 "model": config.model,
                             }
-
-                            if config.export_docx:
-                                try:
-                                    export_file = export_dir / f"{audio_file.stem}.docx"
-                                    export_result = exporter.export(
-                                        transcription_file=Path(result["output"]),
-                                        output_file=export_file,
-                                        export_format="docx",
-                                        metadata=metadata,
-                                    )
-                                    if export_result.get("status") == "success":
-                                        self.log_message(f"  ✅ DOCX: {export_file.name}")
-                                except Exception as error:
-                                    self.log_message(f"  ⚠️  DOCX Export fehlgeschlagen: {error}")
 
                             if config.export_md:
                                 try:
@@ -532,9 +512,6 @@ class AudioTranscriberGUI(QMainWindow):
                         failed += 1
                         progress.update_file_failed()
                         self.log_message(f"❌ Fehler: {result.get('error', 'Unbekannt')}")
-                    elif result.get("status") == "skipped":
-                        progress.update_file_skipped()
-                        self.log_message("⊘ Übersprungen: bereits vorhanden")
 
                     self.signals.progress_summary.emit(progress.get_summary())
 

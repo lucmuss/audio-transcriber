@@ -43,6 +43,7 @@ class AudioSegmenter:
         segment_length_seconds: int,
         overlap_seconds: int,
         output_dir: Path,
+        skip_existing: bool = True,
     ) -> List[Path]:
         """
         Segment audio file into overlapping chunks.
@@ -62,6 +63,42 @@ class AudioSegmenter:
         """
         if not file_path.exists():
             raise FileNotFoundError(f"Audio file not found: {file_path}")
+
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Pre-calculate segmentation parameters
+        # We need the duration for this. Loading with pydub is slow for large files.
+        # We try to get duration without loading the whole file if possible.
+        try:
+            total_duration_seconds = self.get_audio_duration(file_path)
+            total_duration_ms = int(total_duration_seconds * 1000)
+        except Exception as e:
+            logger.warning(f"Failed to get duration via pydub fast-load: {e}")
+            # Fallback to loading the file (done later if needed)
+            total_duration_ms = None
+
+        segment_length_ms = segment_length_seconds * 1000
+        overlap_ms = overlap_seconds * 1000
+        step_ms = segment_length_ms - overlap_ms
+
+        # Check if all segments already exist before loading the heavy audio file
+        if skip_existing and total_duration_ms is not None:
+            num_segments = max(1, int((total_duration_ms - overlap_ms) / step_ms + 0.5))
+            all_exist = True
+            potential_segments = []
+            file_stem = file_path.stem
+            
+            for i in range(1, num_segments + 1):
+                seg_file = output_dir / f"{file_stem}_seg{i:03d}.mp3"
+                if not (seg_file.exists() and seg_file.stat().st_size > 100):
+                    all_exist = False
+                    break
+                potential_segments.append(seg_file)
+            
+            # Additional check: Does the last segment cover the end?
+            if all_exist and len(potential_segments) > 0:
+                logger.info(f"All {num_segments} segments already exist, skipping loading of {file_path.name}")
+                return potential_segments
 
         logger.info(f"Loading audio file: {file_path.name}")
 
@@ -105,6 +142,15 @@ class AudioSegmenter:
             # Export as optimized MP3
             file_stem = file_path.stem
             segment_file = output_dir / f"{file_stem}_seg{segment_num:03d}.mp3"
+
+            if skip_existing and segment_file.exists() and segment_file.stat().st_size > 100:
+                logger.debug(f"Segment already exists, skipping: {segment_file.name}")
+                segment_files.append(segment_file)
+                segment_num += 1
+                start_ms += step_ms
+                if end_ms >= total_duration_ms:
+                    break
+                continue
 
             try:
                 segment.export(

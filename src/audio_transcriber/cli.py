@@ -17,6 +17,7 @@ from .constants import (
     DEFAULT_SEGMENT_LENGTH,
     DEFAULT_SUMMARY_MODEL,
     DEFAULT_SUMMARY_PROMPT,
+    DEFAULT_SUMMARY_TEMPERATURE,
     DEFAULT_TEMPERATURE,
     ENV_PREFIX,
     VALID_RESPONSE_FORMATS,
@@ -243,6 +244,12 @@ For more information: https://github.com/lucmuss/audio-transcriber
         default=env_str(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT),
         help="Custom prompt for summary generation",
     )
+    summary_group.add_argument(
+        "--summary-temperature",
+        type=float,
+        default=env_float(f"{ENV_PREFIX}SUMMARY_TEMPERATURE", DEFAULT_SUMMARY_TEMPERATURE),
+        help=f"Temperature for summary generation (default: {DEFAULT_SUMMARY_TEMPERATURE})",
+    )
 
     # Export parameters
     export_group = parser.add_argument_group("export parameters")
@@ -250,26 +257,14 @@ For more information: https://github.com/lucmuss/audio-transcriber
         "--export",
         type=str,
         nargs="+",
-        choices=["docx", "md", "markdown", "latex", "tex"],
-        help="Export transcriptions to additional formats (e.g., --export docx md latex)",
+        choices=["md", "markdown", "latex", "tex"],
+        help="Export transcriptions to additional formats (e.g., --export md latex)",
     )
     export_group.add_argument(
         "--export-dir",
         type=str,
         default=env_str(f"{ENV_PREFIX}EXPORT_DIR", "./exports"),
         help="Output directory for exports (default: ./exports)",
-    )
-    export_group.add_argument(
-        "--export-title",
-        type=str,
-        default=None,
-        help="Title for exported documents",
-    )
-    export_group.add_argument(
-        "--export-author",
-        type=str,
-        default=None,
-        help="Author name for exported documents",
     )
 
     # Behavior options
@@ -521,19 +516,20 @@ def main() -> int:
             )
             file_pbar.update(1)
 
-            # Generate summary if requested and transcription was successful
-            if args.summarize and result.get("status") == "success":
+            # Generate summary if requested and transcription was successful or skipped (already exists)
+            if args.summarize and result.get("status") in ("success", "skipped"):
                 summary_result = transcriber.summarize_transcription(
                     transcription_file=Path(result["output"]),
                     summary_dir=Path(args.summary_dir),
                     summary_model=args.summary_model,
                     summary_prompt=args.summary_prompt,
+                    summary_temperature=args.summary_temperature,
                     skip_existing=args.skip_existing,
                 )
                 result["summary"] = summary_result
 
             # Export to additional formats if requested
-            if args.export and result.get("status") == "success":
+            if args.export and result.get("status") in ("success", "skipped"):
                 exporter = TranscriptionExporter()
                 export_dir = Path(args.export_dir)
                 result["exports"] = []
@@ -542,8 +538,7 @@ def main() -> int:
                 from datetime import datetime
 
                 metadata = {
-                    "title": args.export_title or audio_file.stem,
-                    "author": args.export_author,
+                    "title": audio_file.stem,
                     "date": datetime.now().strftime("%Y-%m-%d"),
                     "duration": format_duration(result.get("duration_seconds", 0)),
                     "language": result.get("language"),
@@ -555,8 +550,6 @@ def main() -> int:
                     file_stem = audio_file.stem
                     if fmt in ("md", "markdown"):
                         export_file = export_dir / f"{file_stem}.md"
-                    elif fmt == "docx":
-                        export_file = export_dir / f"{file_stem}.docx"
                     elif fmt in ("latex", "tex"):
                         export_file = export_dir / f"{file_stem}.tex"
                     else:
