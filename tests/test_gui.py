@@ -22,7 +22,7 @@ def test_gui_initializes_with_expected_tabs():
     window = AudioTranscriberGUI()
 
     assert window.windowTitle().startswith("Audio Transcriber v")
-    assert window.notebook.count() == 7
+    assert window.notebook.count() == 6
 
     window.close()
 

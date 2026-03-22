@@ -27,7 +27,7 @@ def create_api_tab(gui_instance) -> QWidget:
 
     api_layout.addWidget(QLabel("API Key:"), 0, 0)
     gui_instance.api_key_edit = QLineEdit(gui_instance.api_key_default)
-    gui_instance.api_key_edit.setEchoMode(QLineEdit.Password)
+    gui_instance.api_key_edit.setEchoMode(QLineEdit.EchoMode.Password)
     api_layout.addWidget(gui_instance.api_key_edit, 0, 1)
 
     show_password_btn = QPushButton("Show")
@@ -50,8 +50,7 @@ def create_api_tab(gui_instance) -> QWidget:
     info_group = QGroupBox("Provider Examples")
     info_layout = QVBoxLayout(info_group)
 
-    info_text = QLabel(
-        """
+    info_text = QLabel("""
 OpenAI:
   Base URL: https://api.openai.com/v1
   Models: whisper-1, gpt-4o-transcribe, gpt-4o-mini-transcribe,
@@ -69,11 +68,10 @@ Ollama (Local):
 Together.ai:
   Base URL: https://api.together.xyz/v1
   Model: whisper-large-v3
-        """.strip()
-    )
-    info_text.setTextInteractionFlags(Qt.TextSelectableByMouse)
-    info_text.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-    mono = QFontDatabase.systemFont(QFontDatabase.FixedFont)
+        """.strip())
+    info_text.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+    info_text.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+    mono = QFontDatabase.systemFont(QFontDatabase.SystemFont.FixedFont)
     mono.setPointSize(9)
     info_text.setFont(mono)
     info_layout.addWidget(info_text)

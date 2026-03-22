@@ -20,7 +20,6 @@ from PySide6.QtWidgets import (
 
 from ...constants import VALID_RESPONSE_FORMATS
 
-
 AUDIO_FILTER = "Audio Files (*.mp3 *.wav *.m4a *.flac *.ogg *.aac *.wma *.mp4);;All Files (*)"
 
 
@@ -77,7 +76,9 @@ def create_main_tab(gui_instance) -> QWidget:
     format_index = gui_instance.response_format_combo.findText(default_format)
     if format_index >= 0:
         gui_instance.response_format_combo.setCurrentIndex(format_index)
-    output_layout.addWidget(gui_instance.response_format_combo, 2, 1, alignment=Qt.AlignLeft)
+    output_layout.addWidget(
+        gui_instance.response_format_combo, 2, 1, alignment=Qt.AlignmentFlag.AlignLeft
+    )
 
     output_layout.setColumnStretch(1, 1)
     layout.addWidget(output_group)
@@ -106,19 +107,23 @@ def create_main_tab(gui_instance) -> QWidget:
     gui_instance.segment_length_spin = QSpinBox()
     gui_instance.segment_length_spin.setRange(60, 1800)
     gui_instance.segment_length_spin.setValue(gui_instance.segment_length_default)
-    advanced_layout.addWidget(gui_instance.segment_length_spin, 0, 1, alignment=Qt.AlignLeft)
+    advanced_layout.addWidget(
+        gui_instance.segment_length_spin, 0, 1, alignment=Qt.AlignmentFlag.AlignLeft
+    )
 
     advanced_layout.addWidget(QLabel("Overlap (seconds):"), 1, 0)
     gui_instance.overlap_spin = QSpinBox()
     gui_instance.overlap_spin.setRange(0, 60)
     gui_instance.overlap_spin.setValue(gui_instance.overlap_default)
-    advanced_layout.addWidget(gui_instance.overlap_spin, 1, 1, alignment=Qt.AlignLeft)
+    advanced_layout.addWidget(gui_instance.overlap_spin, 1, 1, alignment=Qt.AlignmentFlag.AlignLeft)
 
     advanced_layout.addWidget(QLabel("Parallel Transcriptions:"), 2, 0)
     gui_instance.concurrency_spin = QSpinBox()
     gui_instance.concurrency_spin.setRange(1, 16)
     gui_instance.concurrency_spin.setValue(gui_instance.concurrency_default)
-    advanced_layout.addWidget(gui_instance.concurrency_spin, 2, 1, alignment=Qt.AlignLeft)
+    advanced_layout.addWidget(
+        gui_instance.concurrency_spin, 2, 1, alignment=Qt.AlignmentFlag.AlignLeft
+    )
 
     advanced_layout.setColumnStretch(2, 1)
     layout.addWidget(advanced_group)

@@ -1,7 +1,7 @@
 # Audio Transcriber 🎙️
 
 [![CI](https://github.com/lucmuss/audio-transcriber/workflows/CI/badge.svg)](https://github.com/lucmuss/audio-transcriber/actions)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9-3.13](https://img.shields.io/badge/python-3.9--3.13-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
@@ -41,7 +41,7 @@ Professional audio transcription tool using OpenAI-compatible Speech-to-Text API
 
 ### Prerequisites
 
-- Python 3.9 or higher
+- Python 3.9 to 3.13
 - FFmpeg (required for audio processing)
 
 ### Install FFmpeg
@@ -88,10 +88,10 @@ uv sync --extra dev
 export AUDIO_TRANSCRIBE_API_KEY="sk-..."
 
 # Transcribe a single file
-audio-transcriber --input podcast.mp3
+uv run audio-transcriber --input podcast.mp3
 
 # Transcribe all files in a directory
-audio-transcriber --input ./audio_files
+uv run audio-transcriber --input ./audio_files
 ```
 
 Output will be saved to `./transcriptions/` by default.
@@ -100,7 +100,7 @@ Output will be saved to `./transcriptions/` by default.
 
 ```bash
 # Start the GUI
-audio-transcriber-gui
+uv run audio-transcriber-gui
 ```
 
 Die GUI bietet:
@@ -118,7 +118,7 @@ Siehe [GUI Guide](docs/GUI_GUIDE.md) für detaillierte Anleitungen.
 
 ```bash
 # Single file with OpenAI
-audio-transcriber --input lecture.mp3
+uv run audio-transcriber --input lecture.mp3
 ```
 
 ### 🌐 Use with Local Ollama (Free & Private)
@@ -128,7 +128,7 @@ audio-transcriber --input lecture.mp3
 ollama serve
 
 # Transcribe using local model
-audio-transcriber \
+uv run audio-transcriber \
   --input podcast.mp3 \
   --base-url http://localhost:11434/v1 \
   --api-key ollama \
@@ -139,17 +139,17 @@ audio-transcriber \
 
 ```bash
 # SRT format
-audio-transcriber --input video.mp4 --response-format srt
+uv run audio-transcriber --input video.mp4 --response-format srt
 
 # VTT format for web
-audio-transcriber --input video.mp4 --response-format vtt
+uv run audio-transcriber --input video.mp4 --response-format vtt
 ```
 
 ### 🎯 Custom Segmentation
 
 ```bash
 # Longer segments for better context
-audio-transcriber \
+uv run audio-transcriber \
   --input long_podcast.mp3 \
   --segment-length 900 \
   --overlap 15 \
@@ -160,17 +160,17 @@ audio-transcriber \
 
 ```bash
 # German language
-audio-transcriber --input german_audio.mp3 --language de
+uv run audio-transcriber --input german_audio.mp3 --language de
 
 # Auto-detect language
-audio-transcriber --input mixed_audio.mp3 --detect-language
+uv run audio-transcriber --input mixed_audio.mp3 --detect-language
 ```
 
 ### 🎨 With Context Prompt
 
 ```bash
 # Improve accuracy with context
-audio-transcriber \
+uv run audio-transcriber \
   --input tech_talk.mp3 \
   --prompt "This is a technical discussion about Kubernetes, Docker, and microservices. Speaker: John Smith"
 ```
@@ -231,7 +231,7 @@ audio-transcriber \
 |--------|-------------|---------|
 | `--summarize` | Generate a summary of transcription | `false` |
 | `--summary-dir` | Output directory for summaries | `./summaries` |
-| `--summary-model` | Model for summarization | `gpt-4.1-mini` |
+| `--summary-model` | Model for summarization | `gpt-5-mini` |
 | `--summary-prompt` | Custom prompt for summary generation | See code |
 
 #### Export Parameters
@@ -309,41 +309,41 @@ Second subtitle line
 
 ```bash
 # Process entire directories
-audio-transcriber --input ./100_podcasts --concurrency 8
+uv run audio-transcriber --input ./100_podcasts --concurrency 8
 ```
 
 ### Resume Failed Jobs
 
 ```bash
 # Automatically skips already processed files
-audio-transcriber --input ./audio_files
+uv run audio-transcriber --input ./audio_files
 # Interrupt with Ctrl+C
-audio-transcriber --input ./audio_files  # Resumes from where it left off
+uv run audio-transcriber --input ./audio_files  # Resumes from where it left off
 ```
 
 ### Dry Run Mode
 
 ```bash
 # Test configuration without API calls
-audio-transcriber --input large_file.mp3 --dry-run
+uv run audio-transcriber --input large_file.mp3 --dry-run
 ```
 
 ### Speaker Diarization (Who Said What)
 
 ```bash
 # Enable speaker diarization
-audio-transcriber \
+uv run audio-transcriber \
   --input meeting.mp3 \
   --enable-diarization
 
 # With expected number of speakers
-audio-transcriber \
+uv run audio-transcriber \
   --input podcast.mp3 \
   --enable-diarization \
   --num-speakers 2
 
 # With known speaker names and reference audio
-audio-transcriber \
+uv run audio-transcriber \
   --input interview.mp3 \
   --enable-diarization \
   --known-speaker-names "Alice Smith" "Bob Johnson" \
@@ -354,12 +354,12 @@ audio-transcriber \
 
 ```bash
 # Generate summary of transcription
-audio-transcriber \
+uv run audio-transcriber \
   --input lecture.mp3 \
   --summarize
 
 # Custom summary model and prompt
-audio-transcriber \
+uv run audio-transcriber \
   --input podcast.mp3 \
   --summarize \
   --summary-model gpt-4o \
@@ -370,12 +370,12 @@ audio-transcriber \
 
 ```bash
 # Export to Word document
-audio-transcriber \
+uv run audio-transcriber \
   --input meeting.mp3 \
   --export docx
 
 # Export to multiple formats with metadata
-audio-transcriber \
+uv run audio-transcriber \
   --input interview.mp3 \
   --export docx md latex \
   --export-title "Company Interview 2026" \
@@ -386,7 +386,7 @@ audio-transcriber \
 
 **Groq (Fast):**
 ```bash
-audio-transcriber \
+uv run audio-transcriber \
   --api-key "gsk_..." \
   --base-url "https://api.groq.com/openai/v1" \
   --model "whisper-large-v3" \
@@ -395,7 +395,8 @@ audio-transcriber \
 
 **Together.ai:**
 ```bash
-audio-transcriber \
+uv run audio-transcriber \
+  --input podcast.mp3 \
   --api-key "..." \
   --base-url "https://api.together.xyz/v1" \
   --model "whisper" \
@@ -414,8 +415,8 @@ cd audio-transcriber
 # Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Setup project with uv
-just setup
+# Install dependencies
+uv sync --extra dev
 
 # Install pre-commit hooks
 uv run pre-commit install
@@ -425,23 +426,25 @@ uv run pre-commit install
 
 ```bash
 # Run bootstrap steps for local development
-just dev
+uv run python scripts/bootstrap.py full
 
 # Format and fix code
-just format
+uv run --with black black src tests
 
-# Check code quality (lint + format check)
-just lint
+# Check code quality
+uv run ruff check src tests
+uv run --with black black --check src tests
+uv run --with flake8 flake8 src tests
 
 # Run tests
-just test
+uv run pytest
 
-# Run complete quality check (lint + typecheck + test)
-just check
-
-# Clean artifacts
-just clean
+# Run complete quality check
+uv run mypy src
+uv run pytest
 ```
+
+`just` remains available as an optional shortcut layer if you already have it installed locally.
 
 ### Manual Commands (Alternative)
 
@@ -484,7 +487,7 @@ uv run mypy src
 
 4. **Batch Processing** (process multiple files efficiently):
    ```bash
-   audio-transcriber --input ./folder_with_100_files
+   uv run audio-transcriber --input ./folder_with_100_files
    ```
 
 ## 🤝 Contributing

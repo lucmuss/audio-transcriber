@@ -91,7 +91,7 @@ def get_model_price_per_minute(model_name: str) -> float:
 VALID_RESPONSE_FORMATS = {"text", "json", "srt", "vtt", "verbose_json", "diarized_json"}
 
 # Export formats
-VALID_EXPORT_FORMATS = {"txt", "md", "latex", "pdf"}
+VALID_EXPORT_FORMATS = {"docx", "md", "markdown", "latex", "tex"}
 
 # Environment variable prefix
 ENV_PREFIX = "AUDIO_TRANSCRIBE_"

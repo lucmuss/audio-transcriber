@@ -4,31 +4,32 @@ Schnelleste Möglichkeit, um mit Audio Transcriber zu starten!
 
 ## Installation (2 Minuten)
 
-### Option 1: Justfile Setup (empfohlen) ⭐
+### Option 1: Direkt mit uv (empfohlen) ⭐
 
 ```bash
 # 1. Klone das Repository
 git clone https://github.com/lucmuss/audio-transcriber.git
 cd audio-transcriber
 
-# 2. Führe das Setup aus
-just setup
+# 2. Virtuelle Umgebung und Abhängigkeiten einrichten
+uv venv
+uv sync
 
 # 3. Done! ✓
 ```
 
-### Option 2: Manuelles Setup
+### Option 2: Mit Justfile (optional)
 
 ```bash
 git clone https://github.com/lucmuss/audio-transcriber.git
 cd audio-transcriber
 
-# Virtual Environment erstellen
-uv venv
-
-# Abhängigkeiten installieren
-uv sync
+# just installieren, z. B. via Paketmanager
+# Danach Projekt einrichten
+just setup
 ```
+
+Die `just`-Kommandos sind nur ein Komfort-Layer. Alle wichtigen Schritte funktionieren auch direkt mit `uv`.
 
 ## Erste Schritte
 
@@ -41,7 +42,7 @@ export AUDIO_TRANSCRIBE_API_KEY="sk-..."
 ### 2. Dry-Run testen (keine Kosten!)
 
 ```bash
-audio-transcriber \
+uv run audio-transcriber \
   --input examples/tests/test_file.mp3 \
   --language de \
   --dry-run
@@ -58,7 +59,7 @@ Output: Zeigt Konfiguration und wie viele Dateien gefunden wurden
 ### 3. Echte Transkription starten
 
 ```bash
-audio-transcriber \
+uv run audio-transcriber \
   --input examples/tests/test_file.mp3 \
   --language de \
   --output-dir ./transcriptions
@@ -72,7 +73,7 @@ Output:
 ### 4. GUI starten (Alternative)
 
 ```bash
-audio-transcriber-gui
+uv run audio-transcriber-gui
 ```
 
 Die GUI bietet alle Features mit einer benutzerfreundlichen Oberfläche!
@@ -85,7 +86,7 @@ Die GUI bietet alle Features mit einer benutzerfreundlichen Oberfläche!
 
 ```bash
 uv sync
-uv run audio-transcriber --input ...
+uv run audio-transcriber --input podcast.mp3
 ```
 
 ### ❌ "externally-managed-environment"
@@ -130,19 +131,19 @@ echo $AUDIO_TRANSCRIBE_API_KEY
 ### Workflow 1: Einzelne Datei
 
 ```bash
-audio-transcriber --input podcast.mp3
+uv run audio-transcriber --input podcast.mp3
 ```
 
 ### Workflow 2: Ordner mit mehreren Dateien
 
 ```bash
-audio-transcriber --input ./my_podcasts --concurrency 4
+uv run audio-transcriber --input ./my_podcasts --concurrency 4
 ```
 
 ### Workflow 3: Mit Untertiteln (SRT/VTT)
 
 ```bash
-audio-transcriber \
+uv run audio-transcriber \
   --input interview.mp3 \
   --response-format srt \
   --output-dir ./subtitles
@@ -151,7 +152,7 @@ audio-transcriber \
 ### Workflow 4: Mit AI-Zusammenfassung
 
 ```bash
-audio-transcriber \
+uv run audio-transcriber \
   --input long_podcast.mp3 \
   --summarize
 ```
@@ -159,7 +160,7 @@ audio-transcriber \
 ### Workflow 5: Speaker Diarization (Sprecher-Erkennung)
 
 ```bash
-audio-transcriber \
+uv run audio-transcriber \
   --input meeting.mp3 \
   --enable-diarization \
   --num-speakers 3
@@ -168,7 +169,7 @@ audio-transcriber \
 ### Workflow 6: Export zu Word/Markdown/LaTeX
 
 ```bash
-audio-transcriber \
+uv run audio-transcriber \
   --input interview.mp3 \
   --export docx md latex \
   --export-title "Interview Transkription" \
@@ -178,7 +179,7 @@ audio-transcriber \
 ### Workflow 7: Kompletter Workflow (All-in-One)
 
 ```bash
-audio-transcriber \
+uv run audio-transcriber \
   --input meeting.mp3 \
   --enable-diarization \
   --summarize \
@@ -210,19 +211,19 @@ audio-transcriber \
 ### 🎙️ Speaker Diarization
 Automatische Sprecher-Erkennung:
 ```bash
-audio-transcriber --input meeting.mp3 --enable-diarization
+uv run audio-transcriber --input meeting.mp3 --enable-diarization
 ```
 
 ### 📝 AI Summarization
 Automatische Zusammenfassungen:
 ```bash
-audio-transcriber --input podcast.mp3 --summarize
+uv run audio-transcriber --input podcast.mp3 --summarize
 ```
 
 ### 📄 Document Export
 Export zu professionellen Formaten:
 ```bash
-audio-transcriber --input lecture.mp3 --export docx md latex
+uv run audio-transcriber --input lecture.mp3 --export docx md latex
 ```
 
 ### 📊 Live Progress Tracking
@@ -232,7 +233,7 @@ audio-transcriber --input lecture.mp3 --export docx md latex
 
 ## Weitere Informationen
 
-- **Alle Parameter:** `audio-transcriber --help`
+- **Alle Parameter:** `uv run audio-transcriber --help`
 - **Vollständige Dokumentation:** Siehe `README.md`
 - **GUI-Anleitung:** Siehe `GUI_GUIDE.md`
 - **Mehr Beispiele:** Siehe `docs/USAGE_EXAMPLES.md`
@@ -246,10 +247,10 @@ audio-transcriber --input lecture.mp3 --export docx md latex
 
 ```bash
 # Beispiel mit deinen Dateien
-audio-transcriber --input ./deine_audio_dateien
+uv run audio-transcriber --input ./deine_audio_dateien
 
 # Oder die GUI verwenden
-audio-transcriber-gui
+uv run audio-transcriber-gui
 ```
 
 Viel Spaß bei der Transkription! 🎉

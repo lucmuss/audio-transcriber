@@ -26,7 +26,7 @@ def create_summary_tab(gui_instance) -> QWidget:
 
     gui_instance.summarize_check = QCheckBox("Create summary")
     gui_instance.summarize_check.setChecked(gui_instance.summarize_default)
-    layout.addWidget(gui_instance.summarize_check, alignment=Qt.AlignLeft)
+    layout.addWidget(gui_instance.summarize_check, alignment=Qt.AlignmentFlag.AlignLeft)
 
     settings_group = QGroupBox("Summarization Settings")
     settings_layout = QGridLayout(settings_group)
@@ -47,13 +47,15 @@ def create_summary_tab(gui_instance) -> QWidget:
     model_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
     settings_layout.addWidget(model_hint, 1, 2)
 
-    settings_layout.addWidget(QLabel("Summary-Prompt:"), 2, 0, alignment=Qt.AlignTop)
+    settings_layout.addWidget(QLabel("Summary-Prompt:"), 2, 0, alignment=Qt.AlignmentFlag.AlignTop)
     gui_instance.summary_prompt_edit = QTextEdit()
     gui_instance.summary_prompt_edit.setPlainText(gui_instance.summary_prompt_default)
     gui_instance.summary_prompt_edit.setMinimumHeight(120)
     settings_layout.addWidget(gui_instance.summary_prompt_edit, 2, 1, 1, 2)
 
-    summary_hint = QLabel("Describe how the summary should be generated (Markdown is used by default)")
+    summary_hint = QLabel(
+        "Describe how the summary should be generated (Markdown is used by default)"
+    )
     summary_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
     settings_layout.addWidget(summary_hint, 3, 1, 1, 2)
 
@@ -62,15 +64,13 @@ def create_summary_tab(gui_instance) -> QWidget:
 
     info_group = QGroupBox("Information")
     info_layout = QVBoxLayout(info_group)
-    info_label = QLabel(
-        """The summarization feature uses an LLM (Large Language Model) 
+    info_label = QLabel("""The summarization feature uses an LLM (Large Language Model)
 to automatically create a concise summary of the transcription.
 
 The summary is saved in the specified summary directory.
 
-Note: This incurs additional API costs based on the 
-length of the transcription and the chosen model."""
-    )
+Note: This incurs additional API costs based on the
+length of the transcription and the chosen model.""")
     info_label.setWordWrap(True)
     info_layout.addWidget(info_label)
 

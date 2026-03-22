@@ -17,9 +17,9 @@ from .constants import (
     DEFAULT_SEGMENT_LENGTH,
     DEFAULT_SUMMARY_MODEL,
     DEFAULT_SUMMARY_PROMPT,
-    DEFAULT_SUMMARY_TEMPERATURE,
     DEFAULT_TEMPERATURE,
     ENV_PREFIX,
+    VALID_EXPORT_FORMATS,
     VALID_RESPONSE_FORMATS,
     get_model_price_per_minute,
 )
@@ -251,8 +251,8 @@ For more information: https://github.com/lucmuss/audio-transcriber
         "--export",
         type=str,
         nargs="+",
-        choices=["md", "markdown", "latex", "tex"],
-        help="Export transcriptions to additional formats (e.g., --export md latex)",
+        choices=sorted(VALID_EXPORT_FORMATS),
+        help="Export transcriptions to additional formats (e.g., --export docx md latex)",
     )
     export_group.add_argument(
         "--export-dir",

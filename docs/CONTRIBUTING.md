@@ -29,9 +29,10 @@ This project adheres to a Code of Conduct. By participating, you are expected to
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.9 to 3.13
 - FFmpeg installed on your system
 - Git
+- uv
 
 ### Installation
 
@@ -93,16 +94,16 @@ docs(readme): update installation instructions
 
 ```bash
 # Run all tests
-pytest
+uv run pytest
 
 # Run with coverage
-pytest --cov=audio_transcriber --cov-report=html
+uv run pytest --cov=audio_transcriber --cov-report=html
 
 # Run specific test file
-pytest tests/test_utils.py
+uv run pytest tests/test_utils.py
 
 # Run specific test
-pytest tests/test_utils.py::TestFormatDuration::test_seconds_only
+uv run pytest tests/test_utils.py::TestFormatDuration::test_seconds_only
 ```
 
 ### Writing Tests

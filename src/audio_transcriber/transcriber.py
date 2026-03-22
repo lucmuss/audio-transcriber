@@ -132,18 +132,28 @@ class AudioTranscriber:
         # Clean file stem (remove original extensions if present)
         # 26.02.2026 20.03.mp3 -> 26.02.2026 20.03
         file_stem = file_path.stem
-        
-        # Ensure output directories use subfolders based on file name early
-        output_dir = output_dir / file_stem
-        output_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Check if already processed
-        output_filename = f"{file_stem}_full.{response_format}"
-        output_file = output_dir / output_filename
 
-        if skip_existing and output_file.exists():
-            logger.info(f"Output already exists, skipping: {output_file.name}")
-            return {"file": str(file_path), "status": "skipped", "output": str(output_file)}
+        output_filename = f"{file_stem}_full.{response_format}"
+        nested_output_dir = output_dir / file_stem
+        nested_output_file = nested_output_dir / output_filename
+        legacy_suffix = file_path.suffix.lstrip(".")
+        legacy_output_file = output_dir / f"{file_stem}_{legacy_suffix}_full.{response_format}"
+
+        # Check if already processed before touching ffmpeg/pydub.
+        if skip_existing:
+            for existing_output in (nested_output_file, legacy_output_file):
+                if existing_output.exists():
+                    logger.info(f"Output already exists, skipping: {existing_output.name}")
+                    return {
+                        "file": str(file_path),
+                        "status": "skipped",
+                        "output": str(existing_output),
+                    }
+
+        # Ensure output directories use subfolders based on file name early
+        output_dir = nested_output_dir
+        output_dir.mkdir(parents=True, exist_ok=True)
+        output_file = nested_output_file
 
         # Get audio duration
         try:
@@ -155,7 +165,9 @@ class AudioTranscriber:
         logger.info(f"Duration: {format_duration(duration_seconds)}")
 
         # Use separate segments directory if provided, otherwise use parent of output_dir
-        seg_dir = segments_dir if segments_dir is not None else output_dir.parent.parent / "segments"
+        seg_dir = (
+            segments_dir if segments_dir is not None else output_dir.parent.parent / "segments"
+        )
         seg_dir = seg_dir / file_stem
 
         # Create segments
@@ -201,7 +213,7 @@ class AudioTranscriber:
             concurrency=concurrency,
             output_dir=output_dir if save_segment_transcriptions else None,
             file_stem=file_stem,
-            file_ext="", # Extension handled in stem for folder
+            file_ext="",  # Extension handled in stem for folder
             effective_model=effective_model,
             enable_diarization=enable_diarization,
             num_speakers=num_speakers,

@@ -29,7 +29,9 @@ def create_transcription_tab(gui_instance) -> QWidget:
     gui_instance.language_edit.setPlaceholderText("en")
     gui_instance.language_edit.setMaxLength(10)
     gui_instance.language_edit.setMaximumWidth(120)
-    settings_layout.addWidget(gui_instance.language_edit, 0, 1, alignment=Qt.AlignLeft)
+    settings_layout.addWidget(
+        gui_instance.language_edit, 0, 1, alignment=Qt.AlignmentFlag.AlignLeft
+    )
 
     hint = QLabel("(e.g., en, de, fr - leave empty for auto-detect)")
     hint.setStyleSheet("color: #6f7782; font-size: 12px;")
@@ -45,9 +47,11 @@ def create_transcription_tab(gui_instance) -> QWidget:
     gui_instance.temperature_spin.setSingleStep(0.1)
     gui_instance.temperature_spin.setDecimals(2)
     gui_instance.temperature_spin.setValue(0.9)
-    settings_layout.addWidget(gui_instance.temperature_spin, 2, 1, alignment=Qt.AlignLeft)
+    settings_layout.addWidget(
+        gui_instance.temperature_spin, 2, 1, alignment=Qt.AlignmentFlag.AlignLeft
+    )
 
-    settings_layout.addWidget(QLabel("Context Prompt:"), 3, 0, alignment=Qt.AlignTop)
+    settings_layout.addWidget(QLabel("Context Prompt:"), 3, 0, alignment=Qt.AlignmentFlag.AlignTop)
     gui_instance.prompt_edit = QTextEdit()
     gui_instance.prompt_edit.setPlainText(gui_instance.prompt_default)
     gui_instance.prompt_edit.setMinimumHeight(100)

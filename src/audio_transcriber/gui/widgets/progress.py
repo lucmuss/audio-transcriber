@@ -74,7 +74,7 @@ def create_progress_section(gui_instance) -> tuple:
     quit_button = QPushButton("Quit")
     quit_button.setObjectName("QuitButton")
     quit_button.clicked.connect(gui_instance.close)
-    button_row.addWidget(quit_button, alignment=Qt.AlignRight)
+    button_row.addWidget(quit_button, alignment=Qt.AlignmentFlag.AlignRight)
 
     root_layout.addLayout(button_row)
 

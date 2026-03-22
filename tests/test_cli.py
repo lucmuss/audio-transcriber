@@ -91,6 +91,13 @@ class TestCreateParser:
         with pytest.raises(SystemExit):
             parser.parse_args(["--input", "test.mp3", "-f", "invalid"])
 
+    def test_export_argument_accepts_supported_formats(self):
+        """Test export argument parsing for documented formats."""
+        parser = create_parser()
+        args = parser.parse_args(["--input", "test.mp3", "--export", "docx", "md", "latex"])
+
+        assert args.export == ["docx", "md", "latex"]
+
     def test_segment_length_argument(self):
         """Test segment length argument parsing."""
         parser = create_parser()

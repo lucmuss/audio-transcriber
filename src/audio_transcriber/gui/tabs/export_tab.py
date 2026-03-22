@@ -52,12 +52,10 @@ def create_export_tab(gui_instance) -> QWidget:
 
     info_group = QGroupBox("Information")
     info_layout = QVBoxLayout(info_group)
-    info_label = QLabel(
-        """Export transcriptions into additional formats:
+    info_label = QLabel("""Export transcriptions into additional formats:
 
 • Markdown: Clean, portable text format for documentation
-• LaTeX: Scientific documents with correct formatting"""
-    )
+• LaTeX: Scientific documents with correct formatting""")
     info_label.setWordWrap(True)
     info_layout.addWidget(info_label)
 

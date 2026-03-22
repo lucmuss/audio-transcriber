@@ -87,17 +87,19 @@ class AudioSegmenter:
             all_exist = True
             potential_segments = []
             file_stem = file_path.stem
-            
+
             for i in range(1, num_segments + 1):
                 seg_file = output_dir / f"{file_stem}_seg{i:03d}.mp3"
                 if not (seg_file.exists() and seg_file.stat().st_size > 100):
                     all_exist = False
                     break
                 potential_segments.append(seg_file)
-            
+
             # Additional check: Does the last segment cover the end?
             if all_exist and len(potential_segments) > 0:
-                logger.info(f"All {num_segments} segments already exist, skipping loading of {file_path.name}")
+                logger.info(
+                    f"All {num_segments} segments already exist, skipping loading of {file_path.name}"
+                )
                 return potential_segments
 
         logger.info(f"Loading audio file: {file_path.name}")

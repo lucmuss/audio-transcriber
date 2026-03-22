@@ -8,8 +8,7 @@ def apply_theme(app: QApplication):
     """Apply a modern, higher-contrast theme to the GUI."""
     app.setStyle("Fusion")
     app.setFont(QFont("IBM Plex Sans", 10))
-    app.setStyleSheet(
-        """
+    app.setStyleSheet("""
         QMainWindow, QWidget#AppCentral {
             background: qlineargradient(
                 x1: 0, y1: 0, x2: 1, y2: 1,
@@ -224,12 +223,11 @@ def apply_theme(app: QApplication):
                 stop: 1 #1e67d8
             );
         }
-        """
-    )
+        """)
 
 
 def toggle_password_visibility(entry: QLineEdit, button: QPushButton):
     """Toggle password visibility in a line edit widget."""
-    is_hidden = entry.echoMode() == QLineEdit.Password
-    entry.setEchoMode(QLineEdit.Normal if is_hidden else QLineEdit.Password)
+    is_hidden = entry.echoMode() == QLineEdit.EchoMode.Password
+    entry.setEchoMode(QLineEdit.EchoMode.Normal if is_hidden else QLineEdit.EchoMode.Password)
     button.setText("Hide" if is_hidden else "Show")

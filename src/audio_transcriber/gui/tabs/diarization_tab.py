@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-
 AUDIO_FILTER = "Audio Files (*.mp3 *.wav *.m4a *.flac *.ogg);;All Files (*)"
 
 
@@ -47,13 +46,17 @@ def create_diarization_tab(gui_instance) -> QWidget:
     gui_instance.num_speakers_spin.setRange(0, 20)
     gui_instance.num_speakers_spin.setSpecialValueText("Auto")
     gui_instance.num_speakers_spin.setValue(gui_instance.num_speakers_default)
-    settings_layout.addWidget(gui_instance.num_speakers_spin, 0, 1, alignment=Qt.AlignLeft)
+    settings_layout.addWidget(
+        gui_instance.num_speakers_spin, 0, 1, alignment=Qt.AlignmentFlag.AlignLeft
+    )
 
     speaker_hint = QLabel("(Select 'Auto' for automatic detection)")
     speaker_hint.setStyleSheet("color: #6f7782; font-size: 12px;")
     settings_layout.addWidget(speaker_hint, 0, 2)
 
-    settings_layout.addWidget(QLabel("Known Speaker Names:"), 1, 0, alignment=Qt.AlignTop)
+    settings_layout.addWidget(
+        QLabel("Known Speaker Names:"), 1, 0, alignment=Qt.AlignmentFlag.AlignTop
+    )
     gui_instance.speaker_names_list = QListWidget()
     gui_instance.speaker_names_list.setMinimumHeight(100)
     settings_layout.addWidget(gui_instance.speaker_names_list, 1, 1, 1, 2)
@@ -69,7 +72,9 @@ def create_diarization_tab(gui_instance) -> QWidget:
     names_buttons.addStretch(1)
     settings_layout.addLayout(names_buttons, 2, 1, 1, 2)
 
-    settings_layout.addWidget(QLabel("Reference Audio Files:"), 3, 0, alignment=Qt.AlignTop)
+    settings_layout.addWidget(
+        QLabel("Reference Audio Files:"), 3, 0, alignment=Qt.AlignmentFlag.AlignTop
+    )
     gui_instance.speaker_refs_list = QListWidget()
     gui_instance.speaker_refs_list.setMinimumHeight(100)
     settings_layout.addWidget(gui_instance.speaker_refs_list, 3, 1, 1, 2)
@@ -89,16 +94,14 @@ def create_diarization_tab(gui_instance) -> QWidget:
 
     info_group = QGroupBox("Information")
     info_layout = QVBoxLayout(info_group)
-    info_label = QLabel(
-        """Speaker Diarization identifies different speakers in the audio.
+    info_label = QLabel("""Speaker Diarization identifies different speakers in the audio.
 
 Options:
 • Number of Speakers: Expected speaker count (auto-detected if not set)
 • Known Speaker Names: List of speaker names to identify
 • Reference Audio: Audio samples of known speakers for better identification
 
-Note: Diarization requires specific models and may incur additional costs."""
-    )
+Note: Diarization requires specific models and may incur additional costs.""")
     info_label.setWordWrap(True)
     info_layout.addWidget(info_label)
     layout.addWidget(info_group)
@@ -127,10 +130,12 @@ def remove_speaker_name(gui_instance):
 
 def add_speaker_reference(gui_instance):
     """Add a reference audio file."""
-    filename, _ = QFileDialog.getOpenFileName(gui_instance, "Select Reference Audio", "", AUDIO_FILTER)
+    filename, _ = QFileDialog.getOpenFileName(
+        gui_instance, "Select Reference Audio", "", AUDIO_FILTER
+    )
     if filename:
         item = QListWidgetItem(Path(filename).name)
-        item.setData(Qt.UserRole, filename)
+        item.setData(Qt.ItemDataRole.UserRole, filename)
         gui_instance.speaker_refs_list.addItem(item)
         gui_instance.known_speaker_references.append(filename)
 

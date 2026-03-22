@@ -15,17 +15,17 @@ uv sync
 
 ```bash
 # Direkt über den Befehl
-audio-transcriber-gui
+uv run audio-transcriber-gui
 
 # Oder über Python-Modul
-python -m audio_transcriber.gui
+uv run python -m audio_transcriber.gui
 ```
 
 ---
 
 ## Benutzeroberfläche Übersicht
 
-Die GUI ist in **7 Tabs** organisiert:
+Die GUI ist in **6 Tabs** organisiert:
 
 ### 📁 Tab 1: Haupteinstellungen
 
@@ -64,7 +64,7 @@ Die GUI ist in **7 Tabs** organisiert:
 #### OpenAI (Standard)
 ```
 Base URL: https://api.openai.com/v1
-Model: whisper-1
+Model: gpt-4o-mini-transcribe
 API Key: sk-...
 ```
 

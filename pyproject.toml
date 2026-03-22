@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "audio-transcriber"
-version = "1.1.1"
+version = "1.1.2"
 description = "Professional audio transcription tool using OpenAI-compatible Speech-to-Text APIs with intelligent segmentation"
 readme = "README.md"
 license = {text = "MIT"}
@@ -35,6 +35,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Multimedia :: Sound/Audio :: Speech",
     "Topic :: Office/Business",
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -42,6 +43,7 @@ classifiers = [
 ]
 requires-python = ">=3.9"
 dependencies = [
+    "audioop-lts>=0.2.2; python_version >= '3.13'",
     "openai>=1.30.0",
     "pydub>=0.25.1",
     "python-docx>=1.1.0",
@@ -134,19 +136,6 @@ disallow_incomplete_defs = false
 check_untyped_defs = true
 ignore_missing_imports = true
 files = ["src/audio_transcriber"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = [
-    "-v",
-    "--strict-markers",
-    "--cov=audio_transcriber",
-    "--cov-report=term-missing",
-    "--cov-report=html",
-]
 
 [tool.coverage.run]
 source = ["src"]

@@ -7,14 +7,25 @@ import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 from PySide6.QtCore import QObject, Qt, Signal, Slot
 from PySide6.QtWidgets import (
     QApplication,
+    QCheckBox,
+    QComboBox,
+    QDoubleSpinBox,
+    QLabel,
+    QLineEdit,
+    QListWidget,
     QMainWindow,
     QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QSpinBox,
     QStyle,
     QTabWidget,
+    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -71,7 +82,7 @@ class GUIConfig:
     skip_existing: bool
     verbose: bool
     enable_diarization: bool
-    num_speakers: int
+    num_speakers: int | None
     known_speaker_names: list[str]
     known_speaker_references: list[str]
     summarize: bool
@@ -96,6 +107,42 @@ class GUISignals(QObject):
 
 class AudioTranscriberGUI(QMainWindow):
     """Main GUI application for Audio Transcriber."""
+
+    notebook: QTabWidget
+    input_path_edit: QLineEdit
+    output_dir_edit: QLineEdit
+    segments_dir_edit: QLineEdit
+    api_key_edit: QLineEdit
+    base_url_edit: QLineEdit
+    model_edit: QLineEdit
+    response_format_combo: QComboBox
+    segment_length_spin: QSpinBox
+    overlap_spin: QSpinBox
+    concurrency_spin: QSpinBox
+    keep_segments_check: QCheckBox
+    skip_existing_check: QCheckBox
+    verbose_check: QCheckBox
+    language_edit: QLineEdit
+    detect_language_check: QCheckBox
+    temperature_spin: QDoubleSpinBox
+    prompt_edit: QTextEdit
+    enable_diarization_check: QCheckBox
+    num_speakers_spin: QSpinBox
+    speaker_names_list: QListWidget
+    speaker_refs_list: QListWidget
+    summarize_check: QCheckBox
+    summary_dir_edit: QLineEdit
+    summary_model_edit: QLineEdit
+    summary_prompt_edit: QTextEdit
+    export_md_check: QCheckBox
+    export_latex_check: QCheckBox
+    export_dir_edit: QLineEdit
+    eta_label: QLabel
+    throughput_label: QLabel
+    cost_label: QLabel
+    log_text: QPlainTextEdit
+    start_button: QPushButton
+    stop_button: QPushButton
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -136,7 +183,9 @@ class AudioTranscriberGUI(QMainWindow):
 
         self.summarize_default = False
         self.summary_dir_default = env_str(f"{ENV_PREFIX}SUMMARY_DIR", "./summaries") or ""
-        self.summary_model_default = env_str(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL) or ""
+        self.summary_model_default = (
+            env_str(f"{ENV_PREFIX}SUMMARY_MODEL", DEFAULT_SUMMARY_MODEL) or ""
+        )
         self.summary_prompt_default = (
             env_str(f"{ENV_PREFIX}SUMMARY_PROMPT", DEFAULT_SUMMARY_PROMPT) or ""
         )
@@ -171,16 +220,20 @@ class AudioTranscriberGUI(QMainWindow):
         self.notebook = QTabWidget(central)
         self.notebook.setDocumentMode(True)
         self.notebook.setUsesScrollButtons(True)
-        self.notebook.setElideMode(Qt.ElideRight)
+        self.notebook.setElideMode(Qt.TextElideMode.ElideRight)
         root_layout.addWidget(self.notebook, stretch=3)
 
         tabs = [
-            ("Input/Output", create_main_tab(self), QStyle.SP_DirOpenIcon),
-            ("API Config", create_api_tab(self), QStyle.SP_ComputerIcon),
-            ("Transcription", create_transcription_tab(self), QStyle.SP_MediaPlay),
-            ("Speakers", create_diarization_tab(self), QStyle.SP_FileDialogDetailedView),
-            ("Export", create_export_tab(self), QStyle.SP_DialogSaveButton),
-            ("Summary", create_summary_tab(self), QStyle.SP_FileDialogInfoView),
+            ("Input/Output", create_main_tab(self), QStyle.StandardPixmap.SP_DirOpenIcon),
+            ("API Config", create_api_tab(self), QStyle.StandardPixmap.SP_ComputerIcon),
+            ("Transcription", create_transcription_tab(self), QStyle.StandardPixmap.SP_MediaPlay),
+            (
+                "Speakers",
+                create_diarization_tab(self),
+                QStyle.StandardPixmap.SP_FileDialogDetailedView,
+            ),
+            ("Export", create_export_tab(self), QStyle.StandardPixmap.SP_DialogSaveButton),
+            ("Summary", create_summary_tab(self), QStyle.StandardPixmap.SP_FileDialogInfoView),
         ]
         style = self.style()
         for title, widget, icon_id in tabs:
@@ -209,7 +262,7 @@ class AudioTranscriberGUI(QMainWindow):
         if hasattr(self, "speaker_refs_list"):
             for i in range(self.speaker_refs_list.count()):
                 item = self.speaker_refs_list.item(i)
-                full_path = item.data(Qt.UserRole)
+                full_path = item.data(Qt.ItemDataRole.UserRole)
                 refs.append((full_path or item.text()).strip())
 
         return names, refs
@@ -276,7 +329,7 @@ class AudioTranscriberGUI(QMainWindow):
         scrollbar.setValue(scrollbar.maximum())
 
     @Slot(object)
-    def _apply_progress_summary(self, summary: dict):
+    def _apply_progress_summary(self, summary: object):
         """Update progress UI with summary dictionary."""
         if not isinstance(summary, dict):
             return
@@ -429,7 +482,9 @@ class AudioTranscriberGUI(QMainWindow):
                             progress.update_file_completed(duration_min, num_segments)
                             self.log_message(f"✅ Success: {result['output']}")
                         else:
-                            self.log_message(f"⊘ Transcription skipped (already exists): {result['output']}")
+                            self.log_message(
+                                f"⊘ Transcription skipped (already exists): {result['output']}"
+                            )
                             successful += 1
                             progress.update_file_skipped()
 
@@ -532,10 +587,7 @@ class AudioTranscriberGUI(QMainWindow):
                 self.signals.dialog.emit(
                     "info",
                     "Finished",
-                    (
-                        "Transcription completed!\n"
-                        f"{successful} file(s) processed successfully."
-                    ),
+                    ("Transcription completed!\n" f"{successful} file(s) processed successfully."),
                 )
             elif failed > 0:
                 self.signals.dialog.emit(
@@ -563,8 +615,7 @@ def main() -> int:
     """Main entry point for GUI."""
     app = QApplication.instance()
     owns_app = app is None
-    if app is None:
-        app = QApplication(sys.argv)
+    app = QApplication(sys.argv) if app is None else cast(QApplication, app)
 
     apply_theme(app)
     window = AudioTranscriberGUI()

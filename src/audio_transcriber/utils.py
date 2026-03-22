@@ -103,16 +103,16 @@ def setup_logging(verbose: bool = True) -> None:
     # Configure root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(log_level)
-    
+
     # Remove existing handlers to avoid duplicates
     for handler in root_logger.handlers[:]:
         root_logger.removeHandler(handler)
-        
+
     # Add console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(logging.Formatter(log_format))
     root_logger.addHandler(console_handler)
-    
+
     # Ensure specific modules are also at DEBUG
     logging.getLogger("audio_transcriber").setLevel(log_level)
     # Silent noisy third party loggers a bit but keep our app chatty

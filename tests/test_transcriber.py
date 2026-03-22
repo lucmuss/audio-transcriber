@@ -273,7 +273,7 @@ class TestAudioTranscriber:
                     # Verify segment_audio was called with segments_dir
                     mock_segment.assert_called_once()
                     args = mock_segment.call_args[0]
-                    assert args[3] == segments_dir
+                    assert args[3] == segments_dir / audio_file.stem
 
     @patch.object(AudioTranscriber, "_cleanup_segments")
     @patch.object(AudioTranscriber, "_transcribe_segments")
